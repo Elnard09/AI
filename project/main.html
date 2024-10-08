@@ -9,11 +9,12 @@
 </head>
 <body>
     <div class="container">
+        <!-- Sidebar code here -->
         <aside class="sidebar" id="sidebar">
             <button id="toggle-btn" class="toggle-btn">☰</button>
             <div class="sidebar-content">
                 <div class="logo">LOGO HERE</div>
-                <div class="new-chat-btn">
+                <div class="new-chat-btn" id="new-chat-page">
                     <span class="text">New Chat</span>
                     <span class="material-symbols-outlined">add_circle</span>
                 </div>
@@ -25,26 +26,27 @@
                 </div> -->
                 <nav>
                     <ul>
-                        <li><span class="material-symbols-outlined">cycle</span><span class="text">Site Summarizer</span></li>
-                        <li><span class="material-symbols-outlined">home_storage</span><span class="text">My Files</span></li>
-                        <li><span class="material-symbols-outlined">history</span><span class="text">My History</span></li>
-                        <li><span class="material-symbols-outlined">info</span><span class="text">Get Help</span></li>
+                        <li id="nav-summarizer"><span class="material-symbols-outlined">cycle</span><span class="text">Site Summarizer</span></li>
+                        <li id="nav-files"><span class="material-symbols-outlined">home_storage</span><span class="text">My Files</span></li>
+                        <li id="nav-history"><span class="material-symbols-outlined">history</span><span class="text">My History</span></li>
+                        <li id="nav-help"><span class="material-symbols-outlined">info</span><span class="text">Get Help</span></li>
                     </ul>
                 </nav>
             </div>
             <div class="sidebar-content">
-                <div class="profile-section">
-                    <img src="/image/img_avatar.png" alt="avatar icon" class="avatar">
+                <div class="profile-section" id="user-profile">
+                    <img src="/Project/image/img_avatar.png" alt="avatar icon" class="avatar">
                     <div class="profile-title">
                         <p id="USERTITLE">bhertz hertz</p>
                         <p id="USEREMAIL">bhertz00@gmail.com</p>
                     </div>
                 </div>
             </div>
-        </aside>        
+        </aside>    
+        <!-- Main content for Main -->    
         <main class="main-content" id="main-content">
             <header>
-                <h1>Hi, I'm Unstuck AI 👋</h1>
+                <h1>Hi, I'm AI Dev👋</h1>
                 <p>Your personal AI assistant to help with your school work. Choose a class or file to chat with</p>
             </header>
             <div class="input-section">
