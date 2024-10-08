@@ -90,6 +90,7 @@ body {
     font-weight: bold;
     margin-bottom: 20px;
     color: #6d28d9;
+    cursor: pointer;
 }
 
 .sidebar.collapsed .logo {
@@ -246,7 +247,7 @@ nav ul li span.material-symbols-outlined{
 .main-content {
     width: 80%;
     padding: 40px;
-    background-color: #fff;
+    background-color: #f8f8f8;
     transition: width 0.3s ease;
 }
 
@@ -254,3 +255,40 @@ nav ul li span.material-symbols-outlined{
     width: 100%;
 }
 
+.content-spacer{
+    margin-top: 10%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+#IMGNEWCHAT{
+    opacity: 50%;
+    border-radius: 4px;
+    padding: 5px;
+    width: 150px;
+}
+
+#UPPERTEXT{
+    color: black;
+    font-size: 35px;
+    font-weight: bold;
+    
+}
+
+#SUBTEXT{
+    color: #808080;
+    font-size: 20px;
+    margin: 10px 0;
+}
+
+.new-class-btn {
+    background-color: #6d28d9;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 10px 20px;
+    margin-top: 10px;
+    cursor: pointer;
+}

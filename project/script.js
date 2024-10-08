@@ -12,8 +12,12 @@ document.getElementById('toggle-btn').addEventListener('click', function() {
 });
 
 // Redirect to New Chat Page when clicked
+document.getElementById('new-chat-for-logo').addEventListener('click', function() {
+    window.location.href = '/project/main.html';
+});
+
 document.getElementById('new-chat-page').addEventListener('click', function() {
-    window.location.href = '/project/NavPages/newchat.html';
+    window.location.href = '/project/main.html';
 });
 
 // Redirect to different HTML files based on nav item clicked

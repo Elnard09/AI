@@ -91,6 +91,7 @@ body {
     font-weight: bold;
     margin-bottom: 20px;
     color: #6d28d9;
+    cursor: pointer;
 }
 
 .sidebar.collapsed .logo {
@@ -128,7 +129,7 @@ body {
     display: none;
 }
 
-.progress-bar {
+/* .progress-bar {
     background-color: #e0e0e0;
     height: 8px;
     border-radius: 5px;
@@ -139,7 +140,7 @@ body {
     background-color: #6d28d9;
     height: 100%;
     border-radius: 5px;
-}
+} */
 
 nav ul {
     list-style: none;
@@ -237,7 +238,7 @@ nav ul li span.material-symbols-outlined{
 .main-content {
     width: 80%;
     padding: 40px;
-    background-color: #fff;
+    background-color: #f8f8f8;
     transition: width 0.3s ease;
 }
 

@@ -90,6 +90,7 @@ body {
     font-weight: bold;
     margin-bottom: 20px;
     color: #6d28d9;
+    cursor: pointer;
 }
 
 .sidebar.collapsed .logo {
@@ -246,7 +247,7 @@ nav ul li span.material-symbols-outlined{
 .main-content {
     width: 80%;
     padding: 40px;
-    background-color: #fff;
+    background-color: #f8f8f8;
     transition: width 0.3s ease;
 }
 
@@ -254,3 +255,23 @@ nav ul li span.material-symbols-outlined{
     width: 100%;
 }
 
+.class-list {
+    margin-top: 20px;
+}
+
+.new-class {
+    display: inline-block;
+    padding: 50px 65px;
+    border: 2px dashed #6c63ff;
+    background: transparent;
+    color: #6c63ff;
+    font-size: 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.3s, color 0.3s;
+}
+
+.new-class:hover {
+    background: #6c63ff;
+    color: white;
+}

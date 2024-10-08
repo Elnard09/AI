@@ -90,6 +90,7 @@ body {
     font-weight: bold;
     margin-bottom: 20px;
     color: #6d28d9;
+    cursor: pointer;
 }
 
 .sidebar.collapsed .logo {
@@ -246,7 +247,7 @@ nav ul li span.material-symbols-outlined{
 .main-content {
     width: 80%;
     padding: 40px;
-    background-color: #fff;
+    background-color: #f8f8f8;
     transition: width 0.3s ease;
 }
 
