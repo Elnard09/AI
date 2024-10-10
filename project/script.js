@@ -1,3 +1,4 @@
+// Common sidebar functionality for all pages
 document.getElementById('toggle-btn').addEventListener('click', function() {
     const sidebar = document.getElementById('sidebar');
     const toggleBtn = document.getElementById('toggle-btn');
@@ -5,13 +6,13 @@ document.getElementById('toggle-btn').addEventListener('click', function() {
     sidebar.classList.toggle('collapsed');
 
     if (sidebar.classList.contains('collapsed')) {
-        toggleBtn.style.right = '5px'; // Adjust button position when collapsed
+        toggleBtn.style.right = '5px';
     } else {
-        toggleBtn.style.right = '20px'; // Adjust button position when expanded
+        toggleBtn.style.right = '20px';
     }
 });
 
-// Redirect to New Chat Page when clicked
+// Navigation event listeners for all pages
 document.getElementById('new-chat-for-logo').addEventListener('click', function() {
     window.location.href = '/project/main.html';
 });
@@ -20,7 +21,6 @@ document.getElementById('new-chat-page').addEventListener('click', function() {
     window.location.href = '/project/main.html';
 });
 
-// Redirect to different HTML files based on nav item clicked
 document.getElementById('nav-summarizer').addEventListener('click', function() {
     window.location.href = '/project/NavPages/summarizer.html';
 });
@@ -41,64 +41,136 @@ document.getElementById('user-profile').addEventListener('click', function() {
     window.location.href = '/project/NavPages/profile.html';
 });
 
+// Function to validate YouTube URL
+function isValidYoutubeUrl(url) {
+    const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+/;
+    return youtubeRegex.test(url);
+}
 
-// for AI CHAT DEV
-document.getElementById('submit-btn').addEventListener('click', function() {
-    const userInput = document.getElementById('user-input').value;
+// Function to show error message
+function showError(message) {
+    let errorDiv = document.getElementById('error-message');
+    if (!errorDiv) {
+        errorDiv = document.createElement('div');
+        errorDiv.id = 'error-message';
+        errorDiv.style.color = 'red';
+        errorDiv.style.marginTop = '10px';
+        const userInput = document.getElementById('user-input');
+        userInput.parentNode.insertBefore(errorDiv, userInput.nextSibling);
+    }
+    errorDiv.textContent = message;
+    
+    // Clear error message after 3 seconds
+    setTimeout(() => {
+        errorDiv.textContent = '';
+    }, 3000);
+}
+
+// Function to check which page we're on and initialize accordingly
+function initializePage() {
+    const currentPath = window.location.pathname;
+    const submitBtn = document.getElementById('submit-btn');
+    const userInput = document.getElementById('user-input');
+
+    if (submitBtn && userInput) {
+        submitBtn.addEventListener('click', function() {
+            const inputText = userInput.value.trim();
+            
+            // Special handling for summarizer page
+            if (currentPath.includes('summarizer.html')) {
+                if (!inputText) {
+                    showError('Please enter a YouTube URL');
+                    return;
+                }
+                if (!isValidYoutubeUrl(inputText)) {
+                    showError('Please enter a valid YouTube URL');
+                    return;
+                }
+            }
+            
+            // If we get here, either it's not the summarizer page or the URL is valid
+            if (inputText) {
+                sessionStorage.setItem('initialMessage', inputText);
+                sessionStorage.setItem('sourcePage', currentPath);
+                window.location.href = "/project/NavPages/chatAI.html";
+            }
+        });
+
+        // Add keypress event listener for Enter key
+        userInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                submitBtn.click();
+            }
+        });
+    }
+
+    if (currentPath.includes('chatAI.html')) {
+        initializeChatAI();
+    }
+}
+
+// Function to initialize the Chat AI page
+function initializeChatAI() {
     const chatWindow = document.getElementById('chat-window');
-    const initialContent = document.getElementById('initial-content');
     const chatInputSection = document.getElementById('chat-input-section');
-
-    // Check if input is not empty
-    if (userInput.trim()) {
-        // Hide initial content and show chat window + chat input
-        initialContent.style.display = 'none';
-        chatWindow.style.display = 'flex';
-        chatInputSection.style.display = 'flex';
-
-        // Add user message to chat window
-        addMessageToChat(userInput, 'user');
-
-        // Clear the input field
-        document.getElementById('user-input').value = '';
-    }
-});
-
-// Function to handle continuous messaging
-document.getElementById('chat-submit-btn').addEventListener('click', function() {
-    const chatInput = document.getElementById('chat-input').value;
-
-    // Check if input is not empty
-    if (chatInput.trim()) {
-        // Add user message to chat window
-        addMessageToChat(chatInput, 'user');
-
-        // Clear the input field
-        document.getElementById('chat-input').value = '';
-
-        // Simulate AI response
+    
+    chatWindow.style.display = 'flex';
+    chatInputSection.style.display = 'flex';
+    
+    const initialMessage = sessionStorage.getItem('initialMessage');
+    const sourcePage = sessionStorage.getItem('sourcePage');
+    
+    if (initialMessage) {
+        let aiResponse;
+        if (sourcePage && sourcePage.includes('summarizer.html')) {
+            addMessageToChat(`YouTube URL: ${initialMessage}`, 'user');
+            aiResponse = "I'll analyze this YouTube video for you. What specific information would you like to know about it?";
+        } else {
+            addMessageToChat(initialMessage, 'user');
+            aiResponse = "Thanks for your message! How can I help you further?";
+        }
+        
         setTimeout(function() {
-            addMessageToChat("AI: This is a simulated response.", 'ai');
-        }, 1000); // Simulated delay for AI response
+            addMessageToChat(`AI: ${aiResponse}`, 'ai');
+        }, 1000);
+        
+        sessionStorage.removeItem('initialMessage');
+        sessionStorage.removeItem('sourcePage');
     }
-});
 
-// Reusable function to add messages to the chat window
+    const chatSubmitBtn = document.getElementById('chat-submit-btn');
+    const chatInput = document.getElementById('chat-input');
+
+    chatSubmitBtn.addEventListener('click', handleChatSubmit);
+    chatInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            handleChatSubmit();
+        }
+    });
+}
+
+function handleChatSubmit() {
+    const chatInput = document.getElementById('chat-input');
+    const message = chatInput.value.trim();
+    
+    if (message) {
+        addMessageToChat(message, 'user');
+        chatInput.value = '';
+        
+        setTimeout(function() {
+            addMessageToChat("AI: This is a simulated response to your message.", 'ai');
+        }, 1000);
+    }
+}
+
 function addMessageToChat(message, sender) {
     const chatWindow = document.getElementById('chat-window');
     const messageDiv = document.createElement('div');
     messageDiv.classList.add('message', sender === 'user' ? 'user-message' : 'ai-message');
     messageDiv.innerText = message;
     chatWindow.appendChild(messageDiv);
-
-    // Scroll to the bottom of the chat window
     chatWindow.scrollTop = chatWindow.scrollHeight;
 }
 
-document.getElementById('chat-input').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-        document.getElementById('chat-submit-btn').click();
-    }
-});
-
-
+// Initialize the page when the DOM is loaded
+document.addEventListener('DOMContentLoaded', initializePage);

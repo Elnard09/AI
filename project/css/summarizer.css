@@ -307,3 +307,14 @@ input[type="text"] {
     padding: 10px 20px;
     cursor: pointer;
 }
+
+#error-message {
+    color: red;
+    margin-top: 10px;
+    font-size: 14px;
+}
+
+/* Optional: make the input border red when there's an error */
+.error-input {
+    border-color: red !important;
+}
