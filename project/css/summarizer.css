@@ -255,3 +255,55 @@ nav ul li span.material-symbols-outlined{
     width: 100%;
 }
 
+/* for Youtube Video Summarizer */
+.class-list {
+    margin-top: 20px;
+    width: 50%; 
+    padding: 30px 45px;
+    border: 2px dashed #6c63ff;
+    background: transparent;
+    color: #6c63ff;
+    font-size: 16px;
+    border-radius: 4px;
+    /* cursor: pointer; */
+    transition: background 0.3s, color 0.3s;
+    box-sizing: border-box;
+}
+
+.class-info {
+    display: flex;
+    padding-bottom: 5px;
+}
+
+.content-text{
+    text-align: center;
+}
+
+#IMGYOUTUBEICON{
+    border-radius: 4px;
+    padding-right: 5px;
+    width: 50px;
+}
+
+/*  */
+.input-section {
+    display: flex;
+    margin: 20px 0;
+}
+
+input[type="text"] {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    margin-right: 10px;
+}
+
+.submit-btn {
+    background-color: #6d28d9;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 10px 20px;
+    cursor: pointer;
+}
