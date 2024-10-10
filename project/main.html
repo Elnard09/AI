@@ -45,6 +45,41 @@
         </aside>    
         <!-- Main content for Main -->    
         <main class="main-content" id="main-content">
+            <!-- Current content to be hidden after the first input -->
+            <div class="initial-content" id="initial-content">
+                <header>
+                    <h1>Hi, I'm AI Dev👋</h1>
+                    <p>Your personal AI assistant to help with your school work. Choose a class or file to chat with</p>
+                </header>
+                <div class="input-section">
+                    <input type="text" id="user-input" placeholder="Ask anything, or enter a Youtube link...">
+                    <button class="submit-btn" id="submit-btn">➔</button>
+                </div>
+                <div class="tabs">
+                    <button class="tab">Summarizer</button>
+                    <button class="tab">Files</button>
+                    <button class="tab">Upload</button>
+                    <button class="tab">Record</button>
+                </div>
+                <div class="class-info">
+                    <p>A class is a set of resources that you can chat with. Create a class to get started!</p>
+                    <button class="new-class-btn">+ New Class</button>
+                </div>
+            </div>
+        
+            <!-- Chat window that will be shown when the user starts a conversation -->
+            <div class="chat-window" id="chat-window" style="display:none;">
+                <!-- Messages will appear here -->
+            </div>
+
+            <!-- Chat input area within the chat window -->
+            <div class="chat-input-section" id="chat-input-section" style="display:none;">
+                <input type="text" id="chat-input" placeholder="Type your message..." />
+                <button class="submit-btn" id="chat-submit-btn">Send</button>
+            </div>
+        </main>
+        
+        <!-- <main class="main-content" id="main-content">
             <header>
                 <h1>Hi, I'm AI Dev👋</h1>
                 <p>Your personal AI assistant to help with your school work. Choose a class or file to chat with</p>
@@ -53,8 +88,11 @@
                 <input type="text" placeholder="Ask anything, or enter a Youtube link...">
                 <button class="submit-btn">➔</button>
             </div>
+            <div class="chat-window" id="chat-window"> -->
+                <!-- Messages will appear here -->
+            <!-- </div>
             <div class="tabs">
-                <button class="tab active">Summarizer</button>
+                <button class="tab">Summarizer</button>
                 <button class="tab">Files</button>
                 <button class="tab">Upload</button>
                 <button class="tab">Record</button>
@@ -63,7 +101,7 @@
                 <p>A class is a set of resources that you can chat with. Create a class to get started!</p>
                 <button class="new-class-btn">+ New Class</button>
             </div>
-        </main>
+        </main> -->
     </div>
 
     <script src="script.js"></script>
