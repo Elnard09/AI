@@ -80,7 +80,9 @@ def get_youtube_transcript(video_id):
         transcript_text = "\n".join([item['text'] for item in transcript])
         return transcript_text
     except Exception as e:
-        return f"Error: {str(e)}"
+        print(f"Error fetching transcript: {str(e)}")  # Print detailed error
+        return None
+
 
 @app.route("/", methods=["GET", "POST"])
 def home():
