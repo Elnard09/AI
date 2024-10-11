@@ -174,3 +174,40 @@ function addMessageToChat(message, sender) {
 
 // Initialize the page when the DOM is loaded
 document.addEventListener('DOMContentLoaded', initializePage);
+
+// New fetch logic for handling the YouTube URL form submission
+document.getElementById('summarizer-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const youtubeUrl = document.getElementById('user-input').value;
+    const submitBtn = document.getElementById('submit-btn');
+    const results = document.getElementById('results');
+    
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Processing...';
+    
+    fetch('/summarize', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ youtube_url: youtubeUrl }),  // Sending the URL to Flask
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            throw new Error(data.error);
+        }
+        
+        document.getElementById('summary').textContent = data.summary;
+        document.getElementById('transcript').textContent = data.transcript;
+        results.style.display = 'block';
+    })
+    .catch(error => {
+        alert('Error: ' + error.message);
+    })
+    .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.textContent = '➔';
+    });
+});
