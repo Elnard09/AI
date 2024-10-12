@@ -22,6 +22,8 @@ print(f"OpenAI API Key: {openai.api_key}")  # Debugging line
 
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "helloworld")
 
+openai.debug = True
+
 def find_audio_files(path, extension=".mp3"):
     """Recursively find all files with extension in path."""
     audio_files = []
@@ -97,21 +99,15 @@ def chunk_audio(filename, segment_length: int, output_dir):
     return sorted(chunked_audio_files)
 
 def transcribe_audio(audio_files: list, output_file=None, model="whisper-1") -> list:
-
-    print("Converting audio to text...")
-
     transcripts = []
     for audio_file in audio_files:
         audio = open(audio_file, "rb")
-        response = openai.Audio.transcribe(model, audio)
-        transcripts.append(response["text"])
-
-    if output_file is not None:
-        # save all transcripts to a .txt file
-        with open(output_file, "w") as file:
-            for transcript in transcripts:
-                file.write(transcript + "\n")
-
+        try:
+            response = openai.Audio.transcribe(model, audio)
+            transcripts.append(response["text"])
+        except openai.error.OpenAIError as e:
+            logging.error(f"OpenAI API error: {str(e)}")
+            raise
     return transcripts
 
 def summarize(
