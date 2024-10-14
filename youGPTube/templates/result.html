@@ -1,3 +1,4 @@
+<!-- result.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,20 +9,22 @@
 <body>
     <h1>Video Summary</h1>
 
-    <h2>Table of Contents (Transcriptions with Timestamps)</h2>
-    <ul>
-        {% for transcript in transcriptions %}
-        <li>
-            <strong>[{{ transcript.timestamp // 60 }}:{{ (transcript.timestamp % 60)|zfill(2) }}]</strong>
-            {{ transcript.text }}
-        </li>
-        {% endfor %}
-    </ul>
-
-    <h2>Summary:</h2>
-    <p>{{ long_summary }}</p>
-
     <h2>Short Summary:</h2>
     <p>{{ short_summary }}</p>
+
+    <h2>Long Summary:</h2>
+    <pre>{{ long_summary }}</pre>
+
+    <h2>Ask a Question about the Video</h2>
+    <form method="POST" action="{{ url_for('ask_question') }}">
+        <textarea name="question" placeholder="Ask a question..."></textarea><br>
+        <input type="hidden" name="summary" value="{{ long_summary }}">
+        <button type="submit">Submit</button>
+    </form>
+
+    {% if answer %}
+    <h3>AI's Response:</h3>
+    <p>{{ answer }}</p>
+    {% endif %}
 </body>
 </html>

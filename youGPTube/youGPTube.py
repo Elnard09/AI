@@ -231,6 +231,36 @@ def home():
 
     return render_template("index.html")
 
+
+@app.route("/ask_question", methods=["POST"])
+def ask_question():
+    # Get the user's question and the summarized content from the form
+    question = request.form.get("question")
+    summary = request.form.get("summary")
+
+    # Use OpenAI to answer the user's question based on the summary
+    system_prompt = "You are a helpful assistant. Use the following summary to answer the question."
+    user_prompt = f"Summary: {summary}\n\nQuestion: {question}"
+
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ]
+        )
+        answer = response["choices"][0]["message"]["content"]
+
+        # Render the result page with the AI's answer
+        return render_template("result.html", long_summary=summary, short_summary=summary, answer=answer)
+
+    except Exception as e:
+        logging.error(f"Error processing the question: {str(e)}", exc_info=True)
+        flash(f"An error occurred while processing the question: {str(e)}", "error")
+        return redirect(url_for('home'))
+
+
 @app.template_filter('zfill')
 def zfill_filter(s, width):
     return str(s).zfill(width)
