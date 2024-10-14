@@ -3,17 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Summary Result</title>
+    <title>Video Summary</title>
 </head>
 <body>
     <h1>Video Summary</h1>
-    
-    <h2>Short Summary</h2>
+
+    <h2>Table of Contents (Transcriptions with Timestamps)</h2>
+    <ul>
+        {% for transcript in transcriptions %}
+        <li>
+            <strong>[{{ transcript.timestamp // 60 }}:{{ (transcript.timestamp % 60)|zfill(2) }}]</strong>
+            {{ transcript.text }}
+        </li>
+        {% endfor %}
+    </ul>
+
+    <h2>Summary:</h2>
+    <p>{{ long_summary }}</p>
+
+    <h2>Short Summary:</h2>
     <p>{{ short_summary }}</p>
-    
-    <h2>Detailed Summary</h2>
-    <pre>{{ long_summary }}</pre>
-    
-    <a href="{{ url_for('home') }}">Summarize another video</a>
 </body>
 </html>
