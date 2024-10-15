@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Video Info</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.9.3/css/bulma.min.css">
+</head>
+<body>
+    <section class="section">
+        <div class="container">
+            <h1 class="title">YouTube Video Information</h1>
+
+            <form id="youtubeForm">
+                <div class="field">
+                    <label class="label">YouTube Video URL</label>
+                    <div class="control">
+                        <input class="input" type="url" name="youtube_url" id="youtube_url" placeholder="Enter a YouTube video URL" required>
+                    </div>
+                </div>
+
+                <div class="control">
+                    <button class="button is-primary" type="submit">Get Video Info</button>
+                </div>
+            </form>
+
+            <div id="results" class="mt-5"></div>
+        </div>
+    </section>
+    <a href="{{ url_for('history') }}" class="btn btn-secondary">View History</a>
+
+    <script>
+        const form = document.getElementById('youtubeForm');
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            
+            const youtubeUrl = document.getElementById('youtube_url').value;
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '';  // Clear previous results
+            
+            try {
+                const response = await fetch('/get_video_info', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ youtube_url: youtubeUrl })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Display the video details
+                    const videoInfo = `
+                        <h2 class="subtitle">Video Title: ${data.items[0].snippet.title}</h2>
+                        <p><strong>Description:</strong> ${data.items[0].snippet.description}</p>
+                        <p><strong>View Count:</strong> ${data.items[0].statistics.viewCount}</p>
+                        <p><strong>Like Count:</strong> ${data.items[0].statistics.likeCount}</p>
+                    `;
+                    resultsDiv.innerHTML = videoInfo;
+                } else {
+                    // Display error message
+                    resultsDiv.innerHTML = `<p class="has-text-danger">${data.error}</p>`;
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `<p class="has-text-danger">Error fetching video details</p>`;
+            }
+        });
+    </script>
+</body>
+</html>

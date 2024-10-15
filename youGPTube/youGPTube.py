@@ -136,11 +136,30 @@ def summarize_youtube_video(youtube_url, outputs_dir):
 # Flask Routes
 @app.route('/main')
 def home():
+<<<<<<< Updated upstream
     return render_template('main.html')
 
 @app.route('/chatAI')
 def chatAI():
     return render_template('chatAI.html')
+=======
+    if request.method == "POST":
+        youtube_url = request.form.get("youtube_url")
+        outputs_dir = "outputs/"
+        
+        try:
+            transcriptions, long_summary, short_summary = summarize_youtube_video(youtube_url, outputs_dir)
+            logging.debug(f"Short summary: {short_summary}")
+            logging.debug(f"Long summary: {long_summary}")
+            return render_template("result.html", transcriptions=transcriptions, long_summary=long_summary, short_summary=short_summary)
+        except Exception as e:
+            logging.error(f"Error processing {youtube_url}: {str(e)}", exc_info=True)
+            flash(f"An error occurred while processing the video: {str(e)}", "error")
+            return redirect(url_for('home'))
+
+
+    return render_template("index.html")
+>>>>>>> Stashed changes
 
 @app.route('/summarizer')
 def summarizer():
@@ -197,7 +216,16 @@ def ask_question():
         return jsonify({"answer": answer})
     except Exception as e:
         logging.error(f"Error processing the question: {str(e)}", exc_info=True)
+<<<<<<< Updated upstream
         return jsonify({"error": str(e)}), 400
+=======
+        flash(f"An error occurred while processing the question: {str(e)}", "error")
+        return redirect(url_for('home'))
+
+@app.template_filter('zfill')
+def zfill_filter(s, width):
+    return str(s).zfill(width)
+>>>>>>> Stashed changes
 
 if __name__ == "__main__":
     app.run(debug=True)

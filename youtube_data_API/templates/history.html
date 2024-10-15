@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>History</title>
+</head>
+<body>
+    <h1>History</h1>
+    <ul>
+        {% for message in messages %}
+            <li>
+                <strong>Time:</strong> {{ message[0] }}<br>
+                <strong>Question:</strong> {{ message[1] }}<br>
+                <strong>Response:</strong> {{ message[2] }}<br><br>
+            </li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
