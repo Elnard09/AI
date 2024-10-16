@@ -119,12 +119,23 @@ function initializePage() {
 
 function summarizeVideo(youtubeUrl) {
     const submitBtn = document.getElementById('submit-chat-ai-button');
-    const results = document.getElementById('results');
+    const loadingDiv = document.createElement('div');
+    loadingDiv.id = 'loading-message';
+    loadingDiv.innerHTML = 'Processing video... This may take a few minutes.';
+    loadingDiv.style.color = 'white';
+    loadingDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+    loadingDiv.style.padding = '20px';
+    loadingDiv.style.position = 'fixed';
+    loadingDiv.style.top = '50%';
+    loadingDiv.style.left = '50%';
+    loadingDiv.style.transform = 'translate(-50%, -50%)';
+    loadingDiv.style.borderRadius = '5px';
+    document.body.appendChild(loadingDiv);
     
     submitBtn.disabled = true;
     submitBtn.textContent = 'Processing...';
     
-    fetch('/summarize', {
+    fetch('/process_video', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -136,17 +147,18 @@ function summarizeVideo(youtubeUrl) {
         if (data.error) {
             throw new Error(data.error);
         }
-        
-        document.getElementById('summary').textContent = data.summary;
-        document.getElementById('transcript').textContent = JSON.stringify(data.transcript, null, 2);
-        results.style.display = 'block';
+        // Redirect to chat interface after successful processing
+        window.location.href = '/chatAI';
     })
     .catch(error => {
-        showError('Error: ' + error.message);
-    })
-    .finally(() => {
+        showError(error.message || 'An error occurred. Please make sure ffmpeg is installed and try again.');
         submitBtn.disabled = false;
         submitBtn.textContent = '➔';
+    })
+    .finally(() => {
+        if (document.getElementById('loading-message')) {
+            document.getElementById('loading-message').remove();
+        }
     });
 }
 
@@ -190,21 +202,6 @@ function initializeChatAI() {
     });
 }
 
-function handleChatSubmit() {
-    const chatInput = document.getElementById('chat-input');
-    const message = chatInput.value.trim();
-    
-    if (message) {
-        addMessageToChat(message, 'user');
-        chatInput.value = '';
-        
-        // Here you would typically send the message to your backend
-        // For now, we'll just simulate a response
-        setTimeout(function() {
-            addMessageToChat("AI: This is a simulated response to your message.", 'ai');
-        }, 1000);
-    }
-}
 
 function addMessageToChat(message, sender) {
     const chatWindow = document.getElementById('chat-window');
@@ -219,32 +216,29 @@ function addMessageToChat(message, sender) {
 document.addEventListener('DOMContentLoaded', initializePage);
 
 // New fetch logic for handling the YouTube URL form submission
+// New fetch logic for handling the YouTube URL form submission
 document.getElementById('summarizer-form').addEventListener('submit', function(e) {
-    e.preventDefault();
+    e.preventDefault();  // Prevent default form submission
     
     const youtubeUrl = document.getElementById('user-chat-ai-input').value;
     const submitBtn = document.getElementById('submit-chat-ai-button');
-    const results = document.getElementById('results');
     
     submitBtn.disabled = true;
     submitBtn.textContent = 'Processing...';
-    
-    fetch('/summarize', {
+
+    fetch('/process_video', {  // Make sure this route matches your Flask route
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/json',  // Ensure content-type is JSON
         },
-        body: JSON.stringify({ youtube_url: youtubeUrl }),  // Sending the URL to Flask
+        body: JSON.stringify({ youtube_url: youtubeUrl }),  // Send JSON data
     })
     .then(response => response.json())
     .then(data => {
         if (data.error) {
             throw new Error(data.error);
         }
-        
-        document.getElementById('summary').textContent = data.summary;
-        document.getElementById('transcript').textContent = data.transcript;
-        results.style.display = 'block';
+        window.location.href = '/chatAI';  // Redirect to the chat page
     })
     .catch(error => {
         alert('Error: ' + error.message);
@@ -254,3 +248,33 @@ document.getElementById('summarizer-form').addEventListener('submit', function(e
         submitBtn.textContent = '➔';
     });
 });
+
+// Function to handle chat submission
+function handleChatSubmit() {
+    const chatInput = document.getElementById('chat-input');
+    const message = chatInput.value.trim();
+    
+    if (message) {
+        addMessageToChat(message, 'user');
+        chatInput.value = '';
+        
+        // Send the question to the backend
+        fetch('/chat_response', {  // Match this route to your Flask route
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ question: message }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            addMessageToChat(data.response, 'ai');
+        })
+        .catch(error => {
+            addMessageToChat("Error: " + error.message, 'ai');
+        });
+    }
+}
