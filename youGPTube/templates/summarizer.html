@@ -53,6 +53,15 @@
                     <p class="content-text">Easily copy the entire caption of a youtube video in one click, search the transcript, and jump to the exact point in the video.</p>
                 </div>
             </div>
+            <!-- Display Transcriptions and Summaries -->
+            <div class="result-section">
+                <h2>Transcriptions</h2>
+                <pre id="transcriptions"></pre>
+                <h2>Long Summary</h2>
+                <p id="long-summary"></p>
+                <h2>Short Summary</h2>
+                <p id="short-summary"></p>
+            </div>
         </main>
     </div>
     <script src="{{ url_for('static', filename='script.js') }}"></script>
