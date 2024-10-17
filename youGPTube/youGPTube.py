@@ -191,8 +191,6 @@ def summarizer():
 def files():
     return render_template('files.html')
 
-import os
-
 @app.route('/history')
 def history():
     # Fetch all history records from the database
@@ -292,4 +290,3 @@ if __name__ == "__main__":
     with app.app_context():  # Create an application context
         db.create_all()  # This will create all tables
     app.run(debug=True)
-

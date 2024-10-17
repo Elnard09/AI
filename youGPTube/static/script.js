@@ -15,22 +15,44 @@ document.getElementById('toggle-btn').addEventListener('click', function() {
 // Navigation event listeners for all pages
 document.getElementById('new-chat-for-logo').addEventListener('click', function() {
     window.location.href = '/main';
+    
 });
 
 document.getElementById('new-chat-page').addEventListener('click', function() {
     window.location.href = '/main';
 });
 
-document.getElementById('nav-summarizer').addEventListener('click', function() {
-    window.location.href = '/summarizer';
+// Add event listeners for summarizer navigation
+const summarizerIds = ['nav-summarizer', 'summarizer-btn'];
+summarizerIds.forEach(function(id) {
+    const element = document.getElementById(id);
+    if (element) {
+        element.addEventListener('click', function() {
+            window.location.href = '/summarizer';
+        });
+    }
 });
 
-document.getElementById('nav-files').addEventListener('click', function() {
-    window.location.href = '/files';
+// Add event listeners for files navigation
+const filesIds = ['nav-files', 'file-btn'];
+filesIds.forEach(function(id) {
+    const element = document.getElementById(id);
+    if (element) {
+        element.addEventListener('click', function() {
+            window.location.href = '/files';
+        });
+    }
 });
 
-document.getElementById('nav-history').addEventListener('click', function() {
-    window.location.href = '/history';
+// Add event listeners for history navigation
+const historyIds = ['nav-history', 'history-btn'];
+historyIds.forEach(function(id) {
+    const element = document.getElementById(id);
+    if (element) {
+        element.addEventListener('click', function() {
+            window.location.href = '/history';
+        });
+    }
 });
 
 document.getElementById('nav-help').addEventListener('click', function() {
@@ -41,7 +63,6 @@ document.getElementById('user-profile').addEventListener('click', function() {
     window.location.href = '/profile';
 });
 
-// Function to validate YouTube URL
 // Function to validate YouTube URL
 function isValidYoutubeUrl(url) {
     const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+/;

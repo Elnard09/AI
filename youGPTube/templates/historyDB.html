@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Summarizer - AI Dashboard</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='summarizer.css') }}">
+    <title>Chat History</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='historyDB.css') }}">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
 </head>
 <body>
@@ -37,25 +37,34 @@
                 </div>
             </div>
         </aside>        
-        <!-- Main content for Summarizer -->
-        <main class="main-content" id="main-content">
-            <header>
-                <h1><span class="material-symbols-outlined">cycle</span>Summarizer Page</h1>
-                <p>This is the content for the summarizer feature.</p>
-            </header>
-            <div class="class-list">
-                <div class="class-info">
-                    <img src="{{ url_for('static', filename='image/youtube-img.png') }}" alt="Youtube image icon" id="IMGYOUTUBEICON">
-                    <input type="text"  id="user-chat-ai-input" placeholder="Enter Youtube Video Link...">
-                    <button class="submit-btn" id="submit-chat-ai-button">➔</button>
-                </div>
-                <div>
-                    <p class="content-text">Easily copy the entire caption of a youtube video in one click, search the transcript, and jump to the exact point in the video.</p>
-                </div>
+        <!-- Main content -->
+        <div class="main-content">
+            <h1><span class="material-symbols-outlined">schedule</span>History</h1>
+            <p>See the chats you created</p>
+            <div class="content-spacer">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Timestamp</th>
+                            <th>User Input</th>
+                            <th>AI Response</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in messages %}
+                        <tr>
+                            <td>{{ record.id }}</td>
+                            <td>{{ record.timestamp }}</td>
+                            <td>{{ record.user_input }}</td>
+                            <td>{{ record.ai_response }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
-        </main>
+        </div>
     </div>
     <script src="{{ url_for('static', filename='script.js') }}"></script>
-    <!-- <script src="../static/script.js"></script> -->
 </body>
 </html>

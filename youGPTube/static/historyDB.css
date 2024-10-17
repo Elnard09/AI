@@ -255,3 +255,16 @@ nav ul li span.material-symbols-outlined{
     width: 100%;
 }
 
+.content-spacer{
+    margin-top: 30px;
+}
+
+.new-class-btn {
+    background-color: #6d28d9;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 10px 20px;
+    margin-top: 10px;
+    cursor: pointer;
+}
