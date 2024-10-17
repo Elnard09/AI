@@ -1,3 +1,4 @@
+import datetime
 import os
 import shutil
 import subprocess 
@@ -10,15 +11,34 @@ from yt_dlp.utils import DownloadError
 import logging
 from dotenv import load_dotenv
 import ffmpeg
+from flask_sqlalchemy import SQLAlchemy
+
+
 
 load_dotenv()
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///video_summaries.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
+
 # Set the OpenAI API key from the environment variable
 openai.api_key = os.getenv("OPENAI_API_KEY")
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "helloworld")
+
+# Database model for history
+class History(db.Model):
+    __tablename__ = 'history'
+    id = db.Column(db.Integer, primary_key=True)
+    timestamp = db.Column(db.String, nullable=False)  # You might want to use db.DateTime for actual timestamps
+    user_input = db.Column(db.String, nullable=False)
+    ai_response = db.Column(db.String, nullable=False)
+
+    def __repr__(self):
+        return f"<History(id={self.id}, timestamp={self.timestamp}, user_input={self.user_input})>"
+
 
 # Check if FFmpeg is installed
 def check_ffmpeg():
@@ -171,9 +191,15 @@ def summarizer():
 def files():
     return render_template('files.html')
 
+import os
+
 @app.route('/history')
 def history():
-    return render_template('history.html')
+    # Fetch all history records from the database
+    history_records = History.query.all()
+    logging.info(f"Fetched {len(history_records)} records from the database at {os.path.abspath('video_summaries.db')}.")
+    return render_template('history.html', messages=history_records)
+
 
 @app.route('/help')
 def help():
@@ -215,10 +241,10 @@ def chat_response():
     data = request.json
     question = data.get("question")
     video_data = session.get('video_data', {})
-    
+
     if not video_data:
         return jsonify({"error": "No video context found"}), 400
-    
+
     try:
         # Construct context from video data
         context = f"""
@@ -228,17 +254,42 @@ def chat_response():
         
         Based on the above video content, please answer this question: {question}
         """
-        
+
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
-            messages=[{"role": "system", "content": "You are an AI assistant that helps users understand YouTube video content. Answer questions based on the video's transcription and summary."},{"role": "user", "content": context}]
+            messages=[
+                {"role": "system", "content": "You are an AI assistant that helps users understand YouTube video content. Answer questions based on the video's transcription and summary."},
+                {"role": "user", "content": context}
+            ]
         )
-        
+
         answer = response["choices"][0]["message"]["content"]
+
+        # Save user input and AI response to the database
+        new_history = History(timestamp=str(datetime.datetime.now()), user_input=question, ai_response=answer)
+        db.session.add(new_history)
+
+        try:
+            db.session.commit()  # Attempt to commit changes
+            logging.info(f"Saved history: {new_history}")
+        except Exception as e:
+            logging.error(f"Error saving to database: {str(e)}")
+            db.session.rollback()  # Roll back the session in case of an error
+            return jsonify({"error": "Could not save history."}), 500
+
         return jsonify({"response": answer})
     except Exception as e:
         logging.error(f"Error generating chat response: {str(e)}", exc_info=True)
         return jsonify({"error": str(e)}), 400
 
+@app.route('/get_history', methods=['GET'])
+def get_history():
+    history_records = History.query.all()
+    return render_template('history.html', history=history_records)
+
+
 if __name__ == "__main__":
+    with app.app_context():  # Create an application context
+        db.create_all()  # This will create all tables
     app.run(debug=True)
+
