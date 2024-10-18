@@ -168,6 +168,22 @@ def summarize_youtube_video(youtube_url, outputs_dir):
     except Exception as e:
         logging.error(f"An error occurred during video processing: {str(e)}", exc_info=True)
         raise
+    
+@app.route('/history_item/<int:history_id>', methods=['GET'])
+def get_history_item(history_id):
+    history_record = History.query.get(history_id)
+    
+    if history_record:
+        return jsonify({
+            "success": True,
+            "history": {
+                "user_input": history_record.user_input,
+                "ai_response": history_record.ai_response
+            }
+        })
+    else:
+        return jsonify({"success": False, "error": "History record not found"}), 404
+
 
 
 @app.route('/')
