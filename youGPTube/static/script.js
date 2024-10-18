@@ -12,16 +12,6 @@ document.getElementById('toggle-btn').addEventListener('click', function() {
     }
 });
 
-// Navigation event listeners for all pages
-document.getElementById('new-chat-for-logo').addEventListener('click', function() {
-    window.location.href = '/main';
-    
-});
-
-document.getElementById('new-chat-page').addEventListener('click', function() {
-    window.location.href = '/main';
-});
-
 // Add event listeners for summarizer navigation
 const summarizerIds = ['nav-summarizer', 'summarizer-btn'];
 summarizerIds.forEach(function(id) {
@@ -238,37 +228,37 @@ document.addEventListener('DOMContentLoaded', initializePage);
 
 // New fetch logic for handling the YouTube URL form submission
 // New fetch logic for handling the YouTube URL form submission
-document.getElementById('summarizer-form').addEventListener('submit', function(e) {
-    e.preventDefault();  // Prevent default form submission
+// document.getElementById('summarizer-form').addEventListener('submit', function(e) {
+//     e.preventDefault();  // Prevent default form submission
     
-    const youtubeUrl = document.getElementById('user-chat-ai-input').value;
-    const submitBtn = document.getElementById('submit-chat-ai-button');
+//     const youtubeUrl = document.getElementById('user-chat-ai-input').value;
+//     const submitBtn = document.getElementById('submit-chat-ai-button');
     
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Processing...';
+//     submitBtn.disabled = true;
+//     submitBtn.textContent = 'Processing...';
 
-    fetch('/process_video', {  // Make sure this route matches your Flask route
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',  // Ensure content-type is JSON
-        },
-        body: JSON.stringify({ youtube_url: youtubeUrl }),  // Send JSON data
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.error) {
-            throw new Error(data.error);
-        }
-        window.location.href = '/chatAI';  // Redirect to the chat page
-    })
-    .catch(error => {
-        alert('Error: ' + error.message);
-    })
-    .finally(() => {
-        submitBtn.disabled = false;
-        submitBtn.textContent = '➔';
-    });
-});
+//     fetch('/process_video', {  // Make sure this route matches your Flask route
+//         method: 'POST',
+//         headers: {
+//             'Content-Type': 'application/json',  // Ensure content-type is JSON
+//         },
+//         body: JSON.stringify({ youtube_url: youtubeUrl }),  // Send JSON data
+//     })
+//     .then(response => response.json())
+//     .then(data => {
+//         if (data.error) {
+//             throw new Error(data.error);
+//         }
+//         window.location.href = '/chatAI';  // Redirect to the chat page
+//     })
+//     .catch(error => {
+//         alert('Error: ' + error.message);
+//     })
+//     .finally(() => {
+//         submitBtn.disabled = false;
+//         submitBtn.textContent = '➔';
+//     });
+// });
 
 // Function to handle chat submission
 function handleChatSubmit() {

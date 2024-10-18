@@ -188,12 +188,9 @@ def get_history_item(history_id):
 
 @app.route('/')
 def home():
-    return render_template('main.html')
+    return render_template('summarizer.html')
 
 # Flask Routes
-@app.route('/main')
-def main():
-    return render_template('main.html')
 
 @app.route('/chatAI')
 def chatAI():
@@ -203,17 +200,12 @@ def chatAI():
 def summarizer():
     return render_template('summarizer.html')
 
-@app.route('/files')
-def files():
-    return render_template('files.html')
-
 @app.route('/history')
 def history():
     # Fetch all history records from the database
     history_records = History.query.all()
     logging.info(f"Fetched {len(history_records)} records from the database at {os.path.abspath('video_summaries.db')}.")
     return render_template('history.html', messages=history_records)
-
 
 @app.route('/help')
 def help():
