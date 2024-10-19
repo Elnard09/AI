@@ -2,7 +2,7 @@ import datetime
 import os
 import shutil
 import subprocess 
-from flask import Flask, render_template, request, jsonify, session
+from flask import Flask, render_template, request, jsonify, session, url_for, redirect
 import librosa
 import openai
 import soundfile as sf
@@ -12,8 +12,8 @@ import logging
 from dotenv import load_dotenv
 import ffmpeg
 from flask_sqlalchemy import SQLAlchemy
-
-
+from youtube_transcript_api import YouTubeTranscriptApi
+import re
 
 load_dotenv()
 
@@ -48,10 +48,38 @@ def check_ffmpeg():
     except FileNotFoundError:
         return False
 
+def extract_video_id(youtube_url):
+    pattern = r"(?:https?://)?(?:www\.)?(?:youtube\.com/(?:[^/]+/.*|(?:v|e(?:mbed)?)|.*[?&]v=)|youtu\.be/)([^&]{11})"
+    match = re.search(pattern, youtube_url)
+    video_id = match.group(1) if match else None
+    logging.debug(f"Extracted video ID: {video_id} from URL: {youtube_url}")
+    return video_id
+
+
+def get_transcription_from_youtube(youtube_url):
+    try:
+        video_id = extract_video_id(youtube_url)
+        if not video_id:
+            raise ValueError("Invalid YouTube URL")
+        
+        logging.debug(f"Fetching transcript for video ID: {video_id}")
+        transcript = YouTubeTranscriptApi.get_transcript(video_id)
+        
+        # Log transcript details
+        logging.debug(f"Transcript for video ID {video_id}: {transcript}")
+        
+        transcription_text = " ".join([item['text'] for item in transcript])
+        return transcription_text
+
+    except Exception as e:
+        logging.error(f"Failed to get transcription for {youtube_url}: {str(e)}")
+        raise Exception(f"Failed to get transcription: {str(e)}")
+
 # Utility function to find audio files
 def find_audio_files(path, extension=".mp3"):
     return [os.path.join(root, f) for root, _, files in os.walk(path) for f in files if f.endswith(extension)]
 
+# Function to download audio from YouTube
 # Function to download audio from YouTube
 def youtube_to_mp3(youtube_url: str, output_dir: str, retries: int = 3) -> str:
     if not check_ffmpeg():
@@ -81,6 +109,8 @@ def youtube_to_mp3(youtube_url: str, output_dir: str, retries: int = 3) -> str:
             if not audio_files:
                 raise RuntimeError("No audio files found after download.")
             return audio_files[0]
+        
+        # Handle yt-dlp specific DownloadError exceptions
         except DownloadError as e:
             logging.error(f"Attempt {attempt + 1}: Download error: {str(e)}")
             if attempt < retries - 1:
@@ -88,6 +118,8 @@ def youtube_to_mp3(youtube_url: str, output_dir: str, retries: int = 3) -> str:
                 continue  # Retry the download
             else:
                 raise RuntimeError(f"Error downloading video after {retries} attempts: {str(e)}")
+
+        # Catch any other exceptions
         except Exception as e:
             logging.error(f"Unexpected error: {str(e)}")
             raise
@@ -126,6 +158,22 @@ def transcribe_audio(audio_files_with_times: list, model="whisper-1") -> list:
             raise RuntimeError(f"Error during transcription: {str(e)}")
     return transcripts
 
+def get_transcription_from_youtube(youtube_url):
+    try:
+        # Extract video ID from the YouTube URL
+        video_id = youtube_url.split('v=')[-1]
+
+        # Retrieve the transcript
+        transcript = YouTubeTranscriptApi.get_transcript(video_id)
+
+        # Join the transcript parts into a single string
+        transcription_text = " ".join([item['text'] for item in transcript])
+
+        return transcription_text
+
+    except Exception as e:
+        # Handle any errors (e.g., video has no captions)
+        raise Exception(f"Failed to get transcription: {str(e)}")
 
 # Function to summarize transcribed audio
 def summarize(chunks_with_timestamps: list, system_prompt: str, model="gpt-3.5-turbo"):
@@ -183,6 +231,19 @@ def get_history_item(history_id):
         })
     else:
         return jsonify({"success": False, "error": "History record not found"}), 404
+    
+@app.route('/delete_history/<int:history_id>', methods=['DELETE'])
+def delete_history(history_id):
+    history_record = History.query.get(history_id)
+    
+    if not history_record:
+        return jsonify({"success": False, "error": "History record not found"}), 404
+    
+    db.session.delete(history_record)
+    db.session.commit()
+    logging.info(f"Deleted history record with id: {history_id}")
+    return jsonify({"success": True})
+
 
 
 
@@ -215,32 +276,27 @@ def help():
 def profile():
     return render_template('profile.html')
 
-@app.route('/process_video', methods=["POST"])
+@app.route('/process_video', methods=['POST'])
 def process_video():
-    data = request.json
-    youtube_url = data.get("youtube_url")
-
-    if not youtube_url:
-        return jsonify({"error": "No YouTube URL provided"}), 400
+    data = request.get_json()
+    youtube_url = data.get('youtube_url')
     
+    logging.debug(f"Processing video: {youtube_url}")
+
     try:
-        # Process video
-        transcriptions, summaries = summarize_youtube_video(youtube_url, outputs_dir="outputs")
-        
-        # Store results in session
+        transcription = get_transcription_from_youtube(youtube_url)
+        logging.debug(f"Transcription received: {transcription}")
+
         session['video_data'] = {
-            'transcriptions': transcriptions,
-            'summary': "\n".join(summaries) if summaries else "",
-            'url': youtube_url
+            'url': youtube_url,
+            'transcriptions': transcription
         }
-        
-        return jsonify({"success": True})
-    except RuntimeError as e:
-        logging.error(f"Runtime error processing {youtube_url}: {str(e)}")
-        return jsonify({"error": str(e)}), 400
+
+        return jsonify({'success': True, 'redirect_url': url_for('chat_page')})
+
     except Exception as e:
-        logging.error(f"Error processing {youtube_url}: {str(e)}", exc_info=True)
-        return jsonify({"error": "An unexpected error occurred. Please try again."}), 400
+        logging.error(f"Error processing video: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)})
 
 @app.route("/chat_response", methods=["POST"])
 def chat_response():
@@ -292,6 +348,15 @@ def chat_response():
 def get_history():
     history_records = History.query.all()
     return render_template('history.html', history=history_records)
+
+@app.route('/chatAI')
+def chat_page():
+    transcription = session.get('transcription', None)
+    if transcription:
+        return render_template('chatAI.html', transcription=transcription)
+    else:
+        return redirect(url_for('summarizer_page'))  # Redirect if no transcription is found
+
 
 
 if __name__ == "__main__":
