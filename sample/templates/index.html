@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube AI Chat</title>
+</head>
+<body>
+    <h1>YouTube AI Chat</h1>
+    <form id="youtube-form">
+        <label for="youtube_link">Enter YouTube Link:</label>
+        <input type="text" id="youtube_link" name="youtube_link" required>
+        <button type="submit">Submit</button>
+    </form>
+
+    <div id="chat-section" style="display:none;">
+        <h2>Ask AI about the Video</h2>
+        <div id="chat-box"></div>
+        <input type="text" id="user-input" placeholder="Ask a question...">
+        <button id="send-chat">Send</button>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $('#youtube-form').on('submit', function(event) {
+            event.preventDefault();
+            var youtubeLink = $('#youtube_link').val();
+
+            $.post('/process_youtube_link', { youtube_link: youtubeLink }, function(data) {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    $('#chat-section').show();
+                    $('#chat-box').append('<p><strong>AI:</strong> Video data saved! You can now ask questions.</p>');
+                }
+            });
+        });
+
+        $('#send-chat').on('click', function() {
+            var youtubeLink = $('#youtube_link').val();
+            var userInput = $('#user-input').val();
+
+            $.post('/ask_question', { youtube_link: youtubeLink, question: userInput }, function(data) {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    $('#chat-box').append('<p><strong>User:</strong> ' + userInput + '</p>');
+                    $('#chat-box').append('<p><strong>AI:</strong> ' + data.response + '</p>');
+                    $('#user-input').val(''); // Clear input
+                }
+            });
+        });
+    </script>
+</body>
+</html>
