@@ -41,7 +41,7 @@
             <div class="class-list">
                 <div class="class-info">
                     <img src="{{ url_for('static', filename='image/youtube-img.png') }}" alt="Youtube image icon" id="IMGYOUTUBEICON">
-                    <input type="text" id="youtube_url" placeholder="Enter YouTube URL" required>
+                    <input type="text"  id="user-chat-ai-input" placeholder="Enter Youtube Video Link...">
                     <button class="submit-btn" id="submit-chat-ai-button">➔</button>
                 </div>
                 <div>
@@ -50,36 +50,7 @@
             </div>
         </main>
     </div>
-    
     <script src="{{ url_for('static', filename='script.js') }}"></script>
-    
-    <!-- Place your JavaScript code here -->
-    <script>
-    document.getElementById('submit-chat-ai-button').addEventListener('click', function(event) {
-        event.preventDefault(); // Prevent the button from submitting the form
-
-        const youtubeUrl = document.getElementById('youtube_url').value;
-
-        fetch('/process_video', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ youtube_url: youtubeUrl })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                // Redirect to the chat page using the URL returned from the server
-                window.location.href = data.redirect_url;
-            } else {
-                alert("Error processing video: " + data.error);
-            }
-        })
-        .catch((error) => {
-            console.error('Error:', error);
-        });
-    });
-    </script>
+    <!-- <script src="../static/script.js"></script> -->
 </body>
 </html>
