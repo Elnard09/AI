@@ -1,5 +1,6 @@
 import datetime
 import os
+from transformers import pipeline
 import shutil
 import subprocess 
 from flask import Flask, render_template, request, jsonify, session, url_for, redirect
@@ -48,12 +49,21 @@ def check_ffmpeg():
     except FileNotFoundError:
         return False
 
-def extract_video_id(youtube_url):
-    pattern = r"(?:https?://)?(?:www\.)?(?:youtube\.com/(?:[^/]+/.*|(?:v|e(?:mbed)?)|.*[?&]v=)|youtu\.be/)([^&]{11})"
-    match = re.search(pattern, youtube_url)
-    video_id = match.group(1) if match else None
-    logging.debug(f"Extracted video ID: {video_id} from URL: {youtube_url}")
-    return video_id
+def extract_video_id(url):
+    # Extract the video ID from various forms of YouTube URLs
+    video_id_match = re.search(r"(?:v=|\/)([0-9A-Za-z_-]{11}).*", url)
+    if video_id_match:
+        return video_id_match.group(1)
+    return None
+
+def get_transcript(video_id):
+    try:
+        transcript = YouTubeTranscriptApi.get_transcript(video_id)
+        return " ".join([entry['text'] for entry in transcript])
+    except Exception as e:
+        print(f"An error occurred while fetching the transcript: {str(e)}")
+        return None
+
 
 
 def get_transcription_from_youtube(youtube_url):
@@ -174,15 +184,35 @@ def get_transcription_from_youtube(youtube_url):
     except Exception as e:
         # Handle any errors (e.g., video has no captions)
         raise Exception(f"Failed to get transcription: {str(e)}")
+    
+def summarize_text(text, max_length=150, min_length=50):
+    summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
+    
+    # Split the text into chunks that the model can handle
+    max_chunk_length = 1024
+    chunks = [text[i:i+max_chunk_length] for i in range(0, len(text), max_chunk_length)]
+    
+    summaries = []
+    for chunk in chunks:
+        summary = summarizer(chunk, max_length=max_length, min_length=min_length, do_sample=False)[0]['summary_text']
+        summaries.append(summary)
+    
+    return summaries
+
 
 # Function to summarize transcribed audio
 def summarize(chunks_with_timestamps: list, system_prompt: str, model="gpt-3.5-turbo"):
     summaries = []
     for chunk in chunks_with_timestamps:
-        timestamp = chunk.get("timestamp", "N/A")
+        timestamp = chunk.get("timestamp", 0)
         content = chunk.get("text", "")
-        timestamp_formatted = f"{timestamp // 60}:{timestamp % 60}"
+        
+        # Format the timestamp in minutes and seconds
+        minutes = timestamp // 60
+        seconds = timestamp % 60
+        timestamp_formatted = f"{minutes:02d}:{seconds:02d}"
 
+        # Generate the summary using OpenAI ChatCompletion
         response = openai.ChatCompletion.create(
             model=model,
             messages=[
@@ -191,9 +221,36 @@ def summarize(chunks_with_timestamps: list, system_prompt: str, model="gpt-3.5-t
             ],
         )
         summary = response["choices"][0]["message"]["content"]
+        
+        # Append the formatted timestamp and summary
         summaries.append(f"[{timestamp_formatted}] {summary}")
 
     return summaries
+
+def your_summarization_function(video_url):
+    video_id = extract_video_id(video_url)
+    if not video_id:
+        return ["Invalid YouTube URL"]
+    
+    transcript = get_transcript(video_id)
+    if not transcript:
+        return ["Unable to fetch video transcript"]
+    
+    summaries = summarize_text(transcript)
+    return summaries
+
+@app.route('/summarize_video', methods=['POST'])
+def summarize_video():
+    video_url = request.json['video_url']
+    # Clear any existing summary data for this session
+    session.pop('video_data', None)
+    
+    summaries = your_summarization_function(video_url)
+    
+    # Store the new summaries in the session
+    session['video_data'] = {'summaries': summaries}
+    
+    return jsonify({'summaries': summaries})
 
 # Main function to process YouTube videos
 def summarize_youtube_video(youtube_url, outputs_dir):
@@ -206,16 +263,23 @@ def summarize_youtube_video(youtube_url, outputs_dir):
     os.makedirs(outputs_dir)
 
     try:
+        # Download audio and chunk it
         audio_filename = youtube_to_mp3(youtube_url, output_dir=raw_audio_dir)
         chunked_audio_files = chunk_audio(audio_filename, segment_length=segment_length, output_dir=chunks_dir)
+        
+        # Transcribe the chunked audio files
         transcriptions = transcribe_audio(chunked_audio_files)
+        
+        # Generate summaries
         system_prompt = "You are a helpful assistant that summarizes YouTube videos. Summarize the transcription to clear bullet points."
         summaries = summarize(transcriptions, system_prompt=system_prompt)
-
+        
         return transcriptions, summaries
+    
     except Exception as e:
         logging.error(f"An error occurred during video processing: {str(e)}", exc_info=True)
         raise
+
     
 @app.route('/history_item/<int:history_id>', methods=['GET'])
 def get_history_item(history_id):
@@ -243,6 +307,12 @@ def delete_history(history_id):
     db.session.commit()
     logging.info(f"Deleted history record with id: {history_id}")
     return jsonify({"success": True})
+
+@app.route('/clear_session')
+def clear_session():
+    session.clear()
+    return redirect(url_for('home'))
+
 
 
 
@@ -284,12 +354,12 @@ def process_video():
     logging.debug(f"Processing video: {youtube_url}")
 
     try:
-        transcription = get_transcription_from_youtube(youtube_url)
-        logging.debug(f"Transcription received: {transcription}")
-
+        transcriptions, summaries = summarize_youtube_video(youtube_url, outputs_dir='output/')
+        
         session['video_data'] = {
             'url': youtube_url,
-            'transcriptions': transcription
+            'summaries': summaries,
+            'transcriptions': transcriptions
         }
 
         return jsonify({'success': True, 'redirect_url': url_for('chat_page')})
@@ -309,10 +379,11 @@ def chat_response():
 
     try:
         # Construct context from video data
+        summaries = "\n".join(video_data.get('summaries', []))  # Join all summaries into a single string
         context = f"""
         Video URL: {video_data.get('url')}
-        Summary: {video_data.get('summary')}
-        Detailed transcription: {video_data.get('transcriptions')}
+        Summary:
+        {summaries}
         
         Based on the above video content, please answer this question: {question}
         """
@@ -339,10 +410,11 @@ def chat_response():
             db.session.rollback()  # Roll back the session in case of an error
             return jsonify({"error": "Could not save history."}), 500
 
-        return jsonify({"response": answer})
+        return jsonify({"response": answer, "summaries": summaries})  # Include summaries in the response
     except Exception as e:
         logging.error(f"Error generating chat response: {str(e)}", exc_info=True)
         return jsonify({"error": str(e)}), 400
+
 
 @app.route('/get_history', methods=['GET'])
 def get_history():
@@ -351,11 +423,14 @@ def get_history():
 
 @app.route('/chatAI')
 def chat_page():
-    transcription = session.get('transcription', None)
-    if transcription:
-        return render_template('chatAI.html', transcription=transcription)
+    video_data = session.get('video_data', None)
+    logging.debug(f"Session video data: {video_data}")
+
+    if video_data:
+        return render_template('chatAI.html', transcription=video_data['transcriptions'])
     else:
-        return redirect(url_for('summarizer_page'))  # Redirect if no transcription is found
+        return redirect(url_for('summarizer'))  # Redirect if no transcription is found
+
 
 
 
