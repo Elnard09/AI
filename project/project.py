@@ -1,10 +1,11 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, session
 from googleapiclient.discovery import build
 from youtube_transcript_api import YouTubeTranscriptApi
 import openai
 from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
 import os
+import json
 import re
 import logging 
 
@@ -19,6 +20,7 @@ db = SQLAlchemy(app)
 # Your API Keys (make sure to keep them secure!)
 openai.api_key = os.getenv("OPENAI_API_KEY")
 youtube = build('youtube', 'v3', developerKey=os.getenv("YOUTUBE_API_KEY"))
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 
 # Model to store video information
 class YouTubeVideo(db.Model):
@@ -59,6 +61,61 @@ def get_video_info_and_transcript(video_id):
         transcript_text = "Transcript not available."
 
     return video_title, video_description, transcript_text
+
+@app.route('/chat_response', methods=['POST'])
+def chat_response():
+    try:
+        data = request.get_json()
+        question = data.get('question', '')
+        
+        # If there's a YouTube URL in the question, process it first
+        if 'youtube.com/' in question or 'youtu.be/' in question:
+            video_id = extract_video_id(question)
+            if not video_id:
+                return jsonify({'error': 'Invalid YouTube URL'})
+            
+            # Get or create video data
+            video_data = get_video_data(video_id)
+            if not video_data:
+                title, description, transcript = get_video_info_and_transcript(video_id)
+                save_video_to_db(video_id, title, description, transcript)
+                video_data = (title, description, transcript)
+            
+            # Store video data in session
+            session['video_data'] = {
+                'video_id': video_id,
+                'title': video_data[0],
+                'transcript': video_data[2]
+            }
+            
+            # Generate initial summary
+            summary_prompt = "Please provide a concise summary of this video content."
+            summary = get_openai_response(summary_prompt, video_data)
+            
+            return jsonify({
+                'response': 'Video processed successfully! You can now ask questions about it.',
+                'summaries': summary
+            })
+        
+        # If it's a question about the video
+        elif 'video_data' in session:
+            video_id = session['video_data']['video_id']
+            video_data = get_video_data(video_id)
+            if video_data:
+                response = get_openai_response(question, video_data)
+                return jsonify({
+                    'response': response,
+                    'summaries': None  # No need to regenerate summary for questions
+                })
+            else:
+                return jsonify({'error': 'Video data not found'})
+        
+        else:
+            return jsonify({'error': 'Please provide a YouTube video link first'})
+            
+    except Exception as e:
+        logging.error(f"Error in chat response: {e}")
+        return jsonify({'error': str(e)})
 
 # Save the video info to the database
 def save_video_to_db(video_id, title, description, transcript):
@@ -174,6 +231,7 @@ def help():
 @app.route('/profile')
 def profile():
     return render_template('profile.html')
+
 
 if __name__ == '__main__':
     app.run(debug=True)
