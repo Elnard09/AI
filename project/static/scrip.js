@@ -52,6 +52,7 @@ document.getElementById('nav-help').addEventListener('click', function() {
 document.getElementById('user-profile').addEventListener('click', function() {
     window.location.href = '/profile';
 });
+
 // Function to validate YouTube URL
 function isValidYoutubeUrl(url) {
     const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+/;
@@ -174,43 +175,39 @@ function summarizeVideo(youtubeUrl) {
     });
 }
 
-document.getElementById('chat-submit-btn').addEventListener('click', function() {
-    const chatInput = document.getElementById('chat-input');
-    const question = chatInput.value.trim();
-
-    if (!question) {
-        alert('Please enter a question.');
+// Function to add event listener for YouTube video link processing
+document.getElementById('submit-chat-ai-button').addEventListener('click', function() {
+    const youtubeUrl = document.getElementById('user-chat-ai-input').value.trim();
+    
+    // Validate the YouTube URL before sending it to the server
+    if (!youtubeUrl) {
+        alert("Please enter a YouTube video link");
         return;
     }
 
-    // Retrieve the YouTube link from session storage
-    const youtubeLink = sessionStorage.getItem('youtubeLink');  // Make sure to set this when processing the video
-
-    // Send the question and YouTube link to the server
-    fetch('/ask_question', {
+    fetch('/process_youtube_link', {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
+            'Content-Type': 'application/json',
         },
-        body: new URLSearchParams({
-            'youtube_link': youtubeLink,
-            'question': question
-        })
+        body: JSON.stringify({ youtube_url: youtubeUrl }),
     })
     .then(response => response.json())
     .then(data => {
-        if (data.response) {
-            addMessageToChat(data.response, 'ai');  // Function to display AI response
-        } else if (data.error) {
-            addMessageToChat(data.error, 'ai');  // Display any error from the server
+        if (data.error) {
+            alert(data.error); // Show an error if something goes wrong
+            return;
         }
+        // Store the transcription and summary in sessionStorage
+        sessionStorage.setItem('transcription', data.transcription);
+        sessionStorage.setItem('summary', data.summary);
+
+        // Redirect to chatAI.html
+        window.location.href = "/chatAI";  // Assuming Flask serves this route
     })
     .catch(error => {
-        addMessageToChat('An error occurred: ' + error.message, 'ai');
+        alert("An error occurred: " + error.message);
     });
-
-    // Clear the chat input
-    chatInput.value = '';
 });
 
 // Function to add messages to the chat window
@@ -221,6 +218,8 @@ function addMessageToChat(message, sender) {
     messageDiv.innerText = message;
     chatWindow.appendChild(messageDiv);
     chatWindow.scrollTop = chatWindow.scrollHeight;
+    chatWindow.scroll({ top: chatWindow.scrollHeight, behavior: 'smooth' });
+
 }
 
 // Initialize the page
