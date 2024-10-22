@@ -132,16 +132,27 @@ def process_youtube_link():
 @app.route('/ask_question', methods=['POST'])
 def ask_question():
     try:
-        youtube_link = request.form['youtube_link']
+        # Retrieve the JSON payload
+        data = request.get_json()
+
+        # Extract YouTube URL and question from the JSON payload
+        youtube_link = data.get('youtube_url')
+        question = data.get('question')
+
+        if not youtube_link or not question:
+            return jsonify({'error': 'YouTube URL or question not provided.'}), 400
+
+        # Extract video ID from the YouTube URL
         video_id = extract_video_id(youtube_link)
 
         if not video_id:
             return jsonify({'error': 'Invalid YouTube URL provided.'}), 400
 
-        question = request.form['question']
-
+        # Fetch the video data from the database
         video_data = get_video_data(video_id)
         if video_data:
+            if video_data[2] == "Transcript not available.":
+                return jsonify({'error': 'Transcript is not available for this video.'}), 400
             ai_response = get_openai_response(question, video_data)
             return jsonify({'response': ai_response})
         else:
@@ -149,6 +160,8 @@ def ask_question():
     except Exception as e:
         logging.error(f"Error asking question: {e}")
         return jsonify({'error': str(e)}), 400
+
+
     
 # Main route to render the interface
 @app.route('/')

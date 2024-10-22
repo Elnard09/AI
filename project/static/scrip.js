@@ -175,52 +175,119 @@ function summarizeVideo(youtubeUrl) {
     });
 }
 
-// Function to add event listener for YouTube video link processing
-document.getElementById('submit-chat-ai-button').addEventListener('click', function() {
-    const youtubeUrl = document.getElementById('user-chat-ai-input').value.trim();
-    
-    // Validate the YouTube URL before sending it to the server
-    if (!youtubeUrl) {
-        alert("Please enter a YouTube video link");
-        return;
-    }
+// Function to ask a question and get AI response
+function askQuestion(question, youtubeUrl) {
+    const submitBtn = document.getElementById('chat-submit-btn');
+    const loadingDiv = document.createElement('div');
+    loadingDiv.id = 'loading-message';
+    loadingDiv.innerHTML = 'Processing your question... Please wait.';
+    loadingDiv.style.color = 'white';
+    loadingDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+    loadingDiv.style.padding = '20px';
+    loadingDiv.style.position = 'fixed';
+    loadingDiv.style.top = '50%';
+    loadingDiv.style.left = '50%';
+    loadingDiv.style.transform = 'translate(-50%, -50%)';
+    loadingDiv.style.borderRadius = '5px';
+    document.body.appendChild(loadingDiv);
 
-    fetch('/process_youtube_link', {
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Processing...';
+
+    fetch('/ask_question', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ youtube_url: youtubeUrl }),
+        body: JSON.stringify({
+            youtube_url: youtubeUrl,
+            question: question,
+        }),
     })
     .then(response => response.json())
     .then(data => {
         if (data.error) {
-            alert(data.error); // Show an error if something goes wrong
-            return;
+            throw new Error(data.error);
         }
-        // Store the transcription and summary in sessionStorage
-        sessionStorage.setItem('transcription', data.transcription);
-        sessionStorage.setItem('summary', data.summary);
-
-        // Redirect to chatAI.html
-        window.location.href = "/chatAI";  // Assuming Flask serves this route
+        // Display the AI's response
+        displayAIResponse(data.response);
     })
     .catch(error => {
-        alert("An error occurred: " + error.message);
+        showError(error.message || 'An error occurred. Please try again.');
+    })
+    .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Ask';
+        if (document.getElementById('loading-message')) {
+            document.getElementById('loading-message').remove();
+        }
     });
-});
-
-// Function to add messages to the chat window
-function addMessageToChat(message, sender) {
-    const chatWindow = document.getElementById('chat-window');
-    const messageDiv = document.createElement('div');
-    messageDiv.classList.add('message', sender === 'user' ? 'user-message' : 'ai-message');
-    messageDiv.innerText = message;
-    chatWindow.appendChild(messageDiv);
-    chatWindow.scrollTop = chatWindow.scrollHeight;
-    chatWindow.scroll({ top: chatWindow.scrollHeight, behavior: 'smooth' });
-
 }
 
-// Initialize the page
+// Function to display user message in chat
+function displayUserMessage(messageText) {
+    const chatWindow = document.getElementById('chat-window');
+    const userMessageElement = document.createElement('div');
+    userMessageElement.className = 'user-message'; // CSS class for user message
+    userMessageElement.textContent = messageText;
+    chatWindow.appendChild(userMessageElement);
+    chatWindow.scrollTop = chatWindow.scrollHeight; // Scroll to bottom
+}
+
+// Function to display AI response in chat
+function displayAIResponse(responseText) {
+    const chatWindow = document.getElementById('chat-window');
+    const responseElement = document.createElement('div');
+    responseElement.className = 'ai-message'; // CSS class for AI response
+    responseElement.textContent = responseText;
+    chatWindow.appendChild(responseElement);
+    chatWindow.scrollTop = chatWindow.scrollHeight; // Scroll to bottom
+}
+
+// Function to handle chat and questions
+function initializeChatAI() {
+    const chatWindow = document.getElementById('chat-window');
+    const chatInputSection = document.getElementById('chat-input-section');
+    const submitBtn = document.getElementById('chat-submit-btn');
+    const inputField = document.getElementById('chat-input');
+
+    chatWindow.style.display = 'block';
+    chatInputSection.style.display = 'flex';
+
+    submitBtn.addEventListener('click', function() {
+        const question = inputField.value.trim();
+        if (!question) {
+            // showError('Please enter a question');
+            return;
+        }
+
+        const youtubeLink = sessionStorage.getItem('youtubeLink');
+        if (!youtubeLink) {
+            showError('No YouTube link found.');
+            return;
+        }
+
+        // Display the user message
+        displayUserMessage(question);
+        
+        // Ask the question
+        askQuestion(question, youtubeLink);
+
+        // Clear the input field
+        inputField.value = '';
+    });
+
+    inputField.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            submitBtn.click();
+        }
+    });
+}
+
+// Initialize the page based on the current view
+window.onload = function() {
+    initializeChatAI();
+};
+
+// Call initialize function on page load
 initializePage();

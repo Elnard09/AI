@@ -6,7 +6,7 @@
     <title>AI Dashboard</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='chatAI.css') }}">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
 </head>
 <body>
     <div class="container">
@@ -47,11 +47,15 @@
             <!-- Chat window that will be shown when the user starts a conversation -->
             <div class="chat-window" id="chat-window" style="display:none;">
                 <!-- Messages will appear here -->
+                <!-- Initial message after video data is saved -->
+                <div class="chat-message bot">
+                    <p class="ai-message">Video data saved! You can now ask questions.</p>
+                </div>
             </div>
 
             <!-- Chat input area within the chat window -->
             <div class="chat-input-section" id="chat-input-section" style="display:none;">
-                <input type="text" id="chat-input" placeholder="Ask anything about the video..." />
+                <input type="text" id="chat-input" placeholder="Ask a question..." />
                 <button class="submit-btn" id="chat-submit-btn">Send</button>
             </div>
         </main>
