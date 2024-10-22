@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat History</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='historyDB.css') }}">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar code here -->
+        <aside class="sidebar" id="sidebar">
+            <button id="toggle-btn" class="toggle-btn">☰</button>
+            <div class="sidebar-content">
+                <div class="logo" id="new-chat-for-logo">LOGO HERE</div>
+                <div class="new-chat-btn" id="new-chat-page">
+                    <span class="text">New Chat</span>
+                    <span class="material-symbols-outlined">add_circle</span>
+                </div>
+                <nav>
+                    <ul>
+                        <li id="nav-summarizer"><span class="material-symbols-outlined">cycle</span><span class="text">Site Summarizer</span></li>
+                        <li id="nav-files"><span class="material-symbols-outlined">home_storage</span><span class="text">My Files</span></li>
+                        <li id="nav-history"><span class="material-symbols-outlined">history</span><span class="text">My History</span></li>
+                        <li id="nav-help"><span class="material-symbols-outlined">info</span><span class="text">Get Help</span></li>
+                    </ul>
+                </nav>
+            </div>
+            <div class="sidebar-content">
+                <div class="profile-section" id="user-profile">
+                    <img src="{{ url_for('static', filename='image/img_avatar.png') }}" alt="avatar icon" class="avatar">
+                    <div class="profile-title">
+                        <p id="USERTITLE">bhertz hertz</p>
+                        <p id="USEREMAIL">bhertz00@gmail.com</p>
+                    </div>
+                </div>
+            </div>
+        </aside>        
+        <!-- Main content -->
+        <div class="main-content">
+            <h1><span class="material-symbols-outlined">schedule</span>History</h1>
+            <p>See the chats you created</p>
+            <div class="content-spacer">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Timestamp</th>
+                            <th>User Input</th>
+                            <th>AI Response</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in messages %}
+                        <tr>
+                            <td>{{ record.id }}</td>
+                            <td>{{ record.timestamp }}</td>
+                            <td>{{ record.user_input }}</td>
+                            <td>{{ record.ai_response }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,270 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f5f5f5;
+}
+
+.container {
+    display: flex;
+    height: 100vh;
+    transition: all 0.3s ease;
+}
+/* <!-- Sidebar code here --> */
+.sidebar {
+    width: 20%;
+    background-color: #fff;
+    padding: 20px;
+    border-right: 1px solid #ddd;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100vh;
+    opacity: 1;
+    transition: transform 0.3s ease, width 0.3s ease;
+    position: relative;
+}
+
+.sidebar.collapsed {
+    width: 50px;
+}
+
+.sidebar .toggle-btn {
+    background-color: #6d28d9;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 10px;
+    cursor: pointer;
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 40px;
+    height: 40px;
+    z-index: 10;
+    transition: right 0.3s ease;
+}
+
+.sidebar.collapsed .toggle-btn {
+    right: 5px;
+}
+
+.sidebar.collapsed nav ul li .text,
+.sidebar.collapsed .new-chat-btn .text {
+    display: none;
+}
+
+.sidebar.collapsed .new-chat-btn .material-symbols-outlined {
+    font-size: 24px;
+    margin-right: 0;
+}
+
+.sidebar.collapsed nav ul li {
+    justify-content: center;
+    padding: 10px 0;
+}
+
+.sidebar.collapsed .new-chat-btn {
+    justify-content: center;
+    margin-top: 45px;
+    margin-left: -15px;
+    padding: 8px 19px;
+}
+
+.sidebar-content {
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+
+.sidebar.collapsed .sidebar-content {
+    opacity: 1;
+    pointer-events: all;
+}
+
+.logo {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 20px;
+    color: #6d28d9;
+    cursor: pointer;
+}
+
+.sidebar.collapsed .logo {
+    font-size: 0;
+}
+
+.sidebar.collapsed .logo img {
+    width: 40px;
+}
+
+.new-chat-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: white;
+    color: black;
+    padding: 10px;
+    border: 1px solid;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    cursor: pointer;
+}
+
+.new-chat-btn:hover {
+    background-color: #f5f5f5;
+    color: black;
+    border-radius: 5px;
+}
+
+.onboarding {
+    margin-bottom: 20px;
+}
+
+.sidebar.collapsed .onboarding {
+    display: none;
+}
+
+.progress-bar {
+    background-color: #e0e0e0;
+    height: 8px;
+    border-radius: 5px;
+    margin-top: 5px;
+}
+
+.progress {
+    background-color: #6d28d9;
+    height: 100%;
+    border-radius: 5px;
+}
+
+nav ul {
+    list-style: none;
+    padding: 0;
+}
+
+nav ul li {
+    display: flex;
+    align-items: center;
+    justify-content: left;
+    padding: 10px 10px;
+    cursor: pointer;
+    color: #6d28d9;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+nav ul li:hover {
+    background-color: #6d28d9;
+    color: white;
+    border-radius: 5px;
+}
+
+.material-symbols-outlined {
+    margin-right: 8px;
+}
+
+nav ul li span.material-symbols-outlined{
+    font-size: 24px;
+}
+
+.sidebar.collapsed nav ul li span.material-symbols-outlined {
+    font-size: 24px; 
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center; 
+    width: 100%; 
+}
+
+.sidebar.collapsed nav ul li:hover {
+    background-color: #6d28d9;
+    color: white;
+    border-radius: 5px;
+    padding: 8px 19px;
+    margin-left: -15px;
+}
+
+.profile-section {
+    display: flex;
+    align-items: center;
+    margin-top: auto;
+    font-size: 14px;
+    color: #333;
+    cursor: pointer;
+}
+
+.profile-title {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.sidebar.collapsed .profile-section {
+    justify-content: center;
+}
+
+.sidebar.collapsed .profile-title {
+    display: none;
+}
+
+.avatar {
+    margin-right: 15px;
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+}
+
+.sidebar.collapsed .avatar {
+    width: 45px;
+    height: 45px;
+    margin: 0 auto;
+}
+
+#USERTITLE {
+    font-weight: bold;
+    font-size: larger;
+}
+
+#USEREMAIL {
+    font-size: small;
+    color: #808080;
+}
+
+
+
+/* <!-- Main content for the Page --> */
+
+/* .main-content {
+    padding: 20px;
+    background-color: #fff;
+    font-size: 18px;
+    color: #333;
+} */
+
+.main-content {
+    width: 80%;
+    padding: 40px;
+    background-color: #f8f8f8;
+    transition: width 0.3s ease;
+}
+
+.container .sidebar.collapsed + .main-content {
+    width: 100%;
+}
+
+.content-spacer{
+    margin-top: 30px;
+}
+
+.new-class-btn {
+    background-color: #6d28d9;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 10px 20px;
+    margin-top: 10px;
+    cursor: pointer;
+}
