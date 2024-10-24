@@ -382,32 +382,41 @@ input[type="text"] {
 .chat-window {
     display: flex;
     flex-direction: column;
-    justify-content: flex-start;
     background-color: #fff;
     border-radius: 10px;
     padding: 20px;
     height: calc(100vh - 100px); /* Account for input section */
     overflow-y: auto;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    width: 100%; /* Ensure full width for alignment */
 }
 
-.message {
-    margin: 10px 0;
-    padding: 10px;
-    border-radius: 10px;
-    max-width: 80%;
-}
-
+/* User message styling */
 .user-message {
-    background-color: #d1e7dd;
-    align-self: flex-end;
-    text-align: right;
+    background-color: #d1e7dd; /* Light green background for user */
+    color: #333; /* Text color */
+    align-self: flex-end; /* Align user's message to the right */
+    text-align: right; /* Align text to the right */
+    padding: 10px 15px; /* Add padding */
+    margin: 10px 0; /* Add margin between messages */
+    border-radius: 10px; /* Rounded corners */
+    max-width: 75%; /* Restrict message width */
+    word-wrap: break-word; /* Wrap long text */
+    margin-left: auto; /* Ensure message sticks to the right */
 }
 
+/* AI message styling */
 .ai-message {
-    background-color: #f1f1f1;
-    align-self: flex-start;
-    text-align: left;
+    background-color: #f1f1f1; /* Light gray background for AI */
+    color: #333; /* Text color */
+    align-self: flex-start; /* Align AI's message to the left */
+    text-align: left; /* Align text to the left */
+    padding: 10px 15px; /* Add padding */
+    margin: 10px 0; /* Add margin between messages */
+    border-radius: 10px; /* Rounded corners */
+    max-width: 75%; /* Restrict message width */
+    word-wrap: break-word; /* Wrap long text */
+    margin-right: auto; /* Ensure message sticks to the left */
 }
 
 /* Chat input section styles */
