@@ -108,26 +108,34 @@ def process_youtube_link():
         if not video_id:
             return jsonify({'error': 'Invalid YouTube URL provided.'}), 400
 
+        # Check if video is in the database
         video_data = get_video_data(video_id)
         if not video_data:
-            # Get video info and transcript
+            # Get video info and transcript if not found in database
             title, description, transcript = get_video_info_and_transcript(video_id)
-            
+
             # Check if the video already exists before saving
             existing_video = YouTubeVideo.query.filter_by(video_id=video_id).first()
             if existing_video:
-                return jsonify({'message': 'Video already exists in the database. You can now ask questions.'})
+                return jsonify({'message': 'Video already exists in the database.', 'transcript': transcript})
 
             # Save video to database
             save_video_to_db(video_id, title, description, transcript)
             video_data = (title, description, transcript)
         else:
-            return jsonify({'message': 'Video data found in database. You can now ask questions.'})
+            title, description, transcript = video_data
 
-        return jsonify({'message': 'Video data saved! You can now ask questions.'})
+        # Return the transcript immediately after processing the link
+        return jsonify({
+            'message': 'Video processed successfully!',
+            'transcript': transcript,
+            'title': title,
+            'description': description
+        })
     except Exception as e:
         logging.error(f"Error processing YouTube link: {e}")
         return jsonify({'error': str(e)}), 400
+
 
 @app.route('/ask_question', methods=['POST'])
 def ask_question():
