@@ -210,14 +210,7 @@ nav ul li span.material-symbols-outlined{
 
 
 /* <!-- Main content for the Page --> */
-
-/* .main-content {
-    padding: 20px;
-    background-color: #fff;
-    font-size: 18px;
-    color: #333;
-} */
-
+/* Main content for the Page */
 .main-content {
     width: 80%;
     padding: 40px;
@@ -229,46 +222,41 @@ nav ul li span.material-symbols-outlined{
     width: 100%;
 }
 
-.chat-window{
-    display: flex;
-    flex-direction: column;
-    /* justify-content: center;
-    align-items: center; */
-    justify-content: flex-start;
-    background-color: #fff;
-    border-radius: 10px;
-    padding: 20px;
-    height: calc(100vh - 100px); /* Account for input section */
-    overflow-y: auto;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+/* Table Styles */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
 }
 
-#IMGNEWCHAT{
-    opacity: 50%;
-    border-radius: 4px;
-    padding: 5px;
-    width: 150px;
+th, td {
+    padding: 10px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
 }
 
-#UPPERTEXT{
-    color: black;
-    font-size: 35px;
-    font-weight: bold;
-    
-}
-
-#SUBTEXT{
-    color: #808080;
-    font-size: 20px;
-    margin: 10px 0;
-}
-
-.new-class-btn {
+th {
     background-color: #6d28d9;
     color: white;
+}
+
+.action-button {
+    background: none;
     border: none;
-    border-radius: 5px;
-    padding: 10px 20px;
-    margin-top: 10px;
     cursor: pointer;
+    color: #6d28d9;
+    margin-right: 10px;
+    transition: color 0.3s;
+}
+
+.action-button:hover {
+    color: #d9534f; /* Color change on hover for delete button */
+}
+
+/* No Data Message */
+.no-data {
+    text-align: center;
+    font-size: 18px;
+    color: #888;
+    margin-top: 20px;
 }

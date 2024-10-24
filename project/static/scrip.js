@@ -125,6 +125,8 @@ function initializePage() {
 
     if (currentPath.includes('/chatAI')) {
         initializeChatAI();
+    } else if (currentPath.includes('/history')) {
+        displayChatHistory();
     }
 }
 
@@ -288,6 +290,62 @@ function initializeChatAI() {
 window.onload = function() {
     initializeChatAI();
 };
+
+
+// Function to display chat history
+function displayChatHistory() {
+    const chatHistoryContainer = document.getElementById('chat-history');
+    const noDataMessage = document.getElementById('no-data-message');
+    const sessions = JSON.parse(localStorage.getItem('chatSessions')) || [];
+
+    if (sessions.length === 0) {
+        noDataMessage.style.display = 'block';
+    } else {
+        sessions.forEach(session => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${session.date}</td>
+                <td>${session.message}</td>
+                <td>${session.response}</td>
+                <td>
+                    <button type="button" class="action-button" onclick="reinteractSession('${session.date}')">
+                        <span class="material-symbols-outlined">chat</span>
+                    </button>
+                    <button type="button" class="action-button" onclick="deleteSession('${session.date}')">
+                        <span class="material-symbols-outlined">delete</span>
+                    </button>
+                </td>
+            `;
+            chatHistoryContainer.appendChild(row);
+        });
+    }
+}
+
+// Function to save session data
+function saveSession(date, message, response) {
+    let sessions = JSON.parse(localStorage.getItem('chatSessions')) || [];
+    sessions.push({ date, message, response });
+    localStorage.setItem('chatSessions', JSON.stringify(sessions));
+}
+
+// Function to delete a session
+function deleteSession(date) {
+    let sessions = JSON.parse(localStorage.getItem('chatSessions')) || [];
+    sessions = sessions.filter(session => session.date !== date);
+    localStorage.setItem('chatSessions', JSON.stringify(sessions));
+    window.location.reload(); // Reload the page to update the table
+}
+
+// Function to re-interact with a session
+function reinteractSession(date) {
+    const sessions = JSON.parse(localStorage.getItem('chatSessions')) || [];
+    const sessionToInteract = sessions.find(session => session.date === date);
+    if (sessionToInteract) {
+        // Redirect to chatAI.html with session data, e.g., using URL parameters
+        localStorage.setItem('currentSession', JSON.stringify(sessionToInteract));
+        window.location.href = '/chatAI.html';
+    }
+}
 
 // Call initialize function on page load
 initializePage();

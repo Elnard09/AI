@@ -37,28 +37,19 @@
         <div class="main-content">
             <h1><span class="material-symbols-outlined">schedule</span>History</h1>
             <p>See the chats you created</p>
-            <div class="chat-window" id="chat-window">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Timestamp</th>
-                            <th>User Input</th>
-                            <th>AI Response</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for record in messages %}
-                        <tr>
-                            <td>{{ record.id }}</td>
-                            <td>{{ record.timestamp }}</td>
-                            <td>{{ record.user_input }}</td>
-                            <td>{{ record.ai_response }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Message</th>
+                        <th>AI Response</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="chat-history"></tbody>
+            </table>
+            <div class="no-data" id="no-data-message" style="display: none;">No chat history found.</div>
         </div>
     </div>
     <script src="{{ url_for('static', filename='scrip.js') }}"></script>
