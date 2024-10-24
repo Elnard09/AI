@@ -186,7 +186,12 @@ def summarizer():
 
 @app.route('/history')
 def history():
-    return render_template('history.html')
+    # Query the database for all videos
+    videos = YouTubeVideo.query.all()
+    
+    # Pass the videos to the template
+    return render_template('history.html', videos=videos)
+
 
 @app.route('/help')
 def help():
