@@ -240,11 +240,170 @@ function displayUserMessage(messageText) {
 function displayAIResponse(responseText) {
     const chatWindow = document.getElementById('chat-window');
     const responseElement = document.createElement('div');
-    responseElement.className = 'ai-message'; // CSS class for AI response
-    responseElement.textContent = responseText;
+    responseElement.className = 'ai-message';
+    
+    const formattedText = smartFormatResponse(responseText, false);
+    responseElement.innerHTML = formattedText
+        .split('\n')
+        .filter(line => line.trim() !== '')
+        .join('<br>');
+    
+    // Add basic styling
+    responseElement.style.whiteSpace = 'pre-wrap';
+    responseElement.style.wordBreak = 'break-word';
+    responseElement.style.lineHeight = '1.5';
+    
     chatWindow.appendChild(responseElement);
-    chatWindow.scrollTop = chatWindow.scrollHeight; // Scroll to bottom
+    chatWindow.scrollTop = chatWindow.scrollHeight;
 }
+
+// Improve the formatting and structure of AI responses to make it more context-aware and visually pleasing
+function smartFormatResponse(text, isUserMessage = false) {
+    if (isUserMessage) {
+        return text.trim();
+    }
+
+    // Content type patterns
+    const patterns = {
+        tableOfContents: /^(Table of Contents|TOC):/im,
+        levelHeaders: /^(Level \d|Basic TOC|Detailed TOC|Expanded|Summary)/im,
+        bulletList: /^[-•*]/m,
+        numberedList: /^\d+[\.)]/m,
+        keyPoints: /^(Key (Points|Tips|Takeaways)|Main Points):/im,
+        stepByStep: /^(Step \d|Steps to|How to|Instructions):/im,
+        definition: /^(Definition|What is|Meaning):/im,
+        comparison: /^(Comparison|Versus|Differences between):/im,
+        summary: /^(Summary|Overview|Conclusion):/im,
+        question: /^Q:|^Question:/im,
+        answer: /^A:|^Answer:/im
+    };
+
+    // Detect content type
+    let contentType = 'general';
+    if (patterns.tableOfContents.test(text) || patterns.levelHeaders.test(text)) {
+        contentType = 'tableOfContents';
+    } else if (patterns.stepByStep.test(text)) {
+        contentType = 'stepByStep';
+    } else if (patterns.keyPoints.test(text)) {
+        contentType = 'keyPoints';
+    } else if (patterns.comparison.test(text)) {
+        contentType = 'comparison';
+    } else if (patterns.question.test(text) && patterns.answer.test(text)) {
+        contentType = 'qAndA';
+    } else if (patterns.bulletList.test(text)) {
+        contentType = 'bulletList';
+    } else if (patterns.numberedList.test(text)) {
+        contentType = 'numberedList';
+    }
+
+    // Format based on content type
+    let formattedText = text;
+
+    switch (contentType) {
+        case 'tableOfContents':
+            formattedText = text
+                // Format headers and levels
+                .replace(/^(#{1,3}|Level \d|Table of Contents|TOC|Basic TOC|Detailed TOC|Expanded|Summary)/gim, '\n\n$1')
+                // Format numbered items
+                .replace(/^(\d+[\.)]\s*)(.*?)$/gm, '$1$2')
+                // Format bullet points with indentation
+                .replace(/^([-•*]\s*)(.*?)$/gm, '    $1$2')
+                // Clean up spacing
+                .replace(/\n{3,}/g, '\n\n')
+                .trim();
+            break;
+
+        case 'stepByStep':
+            formattedText = text
+                // Format step headers
+                .replace(/^(Step \d|Steps to|How to|Instructions):/im, '\n$1:\n')
+                // Format numbered steps
+                .replace(/^(\d+[\.)]\s*)(.*?)$/gm, '\n$1 $2')
+                // Format substeps or bullet points
+                .replace(/^([-•*]\s*)(.*?)$/gm, '    $1 $2')
+                // Clean up spacing
+                .replace(/\n{3,}/g, '\n\n')
+                .trim();
+            break;
+
+        case 'bulletList':
+        case 'keyPoints':
+            formattedText = text
+                // Format section headers
+                .replace(/^(Key (Points|Tips|Takeaways)|Main Points):/im, '$1:\n')
+                // Format bullet points with consistent spacing
+                .replace(/^([-•*]\s*)(.*?)$/gm, '\n$1 $2')
+                // Format nested bullet points
+                .replace(/^\s*([-•*])\s*([^-•*].*?)$/gm, '  $1 $2')
+                // Clean up spacing
+                .replace(/\n{3,}/g, '\n\n')
+                .trim();
+            break;
+
+        case 'numberedList':
+            formattedText = text
+                // Format numbered items with consistent spacing
+                .replace(/^(\d+[\.)]\s*)(.*?)$/gm, '\n$1 $2')
+                // Format sub-items with indentation
+                .replace(/^(\s+\d+[\.)]\s*)(.*?)$/gm, '    $1 $2')
+                // Clean up spacing
+                .replace(/\n{3,}/g, '\n\n')
+                .trim();
+            break;
+
+        case 'comparison':
+            formattedText = text
+                // Format comparison headers
+                .replace(/^(Comparison|Versus|Differences between):/im, '$1:\n')
+                // Format comparison points
+                .replace(/^([-•*]\s*)(.*?)$/gm, '\n$1 $2')
+                // Add line breaks for versus comparisons
+                .replace(/vs\./gi, 'vs.\n')
+                // Clean up spacing
+                .replace(/\n{3,}/g, '\n\n')
+                .trim();
+            break;
+
+        case 'qAndA':
+            formattedText = text
+                // Format questions with spacing
+                .replace(/^Q:|^Question:/gim, '\nQ:')
+                // Format answers with spacing
+                .replace(/^A:|^Answer:/gim, '\nA:')
+                // Clean up spacing
+                .replace(/\n{3,}/g, '\n\n')
+                .trim();
+            break;
+
+        default:
+            // For general content, preserve natural paragraph breaks
+            formattedText = text
+                .split(/\n\s*\n/)
+                .map(paragraph => paragraph
+                    .replace(/\s+/g, ' ')
+                    .trim()
+                )
+                .filter(paragraph => paragraph.length > 0)
+                .join('\n\n');
+    }
+
+    // Apply consistent spacing for all types
+    formattedText = formattedText
+        .replace(/\s+$/gm, '')           // Remove trailing spaces
+        .replace(/^\s+/gm, '')           // Remove leading spaces
+        .replace(/\n{3,}/g, '\n\n')      // Normalize multiple line breaks
+        .trim();
+
+    // Add consistent paragraph spacing for readability
+    if (contentType === 'general') {
+        formattedText = formattedText
+            .replace(/([.!?])\s+(?=[A-Z])/g, '$1\n')  // Split sentences on punctuation
+            .replace(/\n{3,}/g, '\n\n');              // Clean up excessive line breaks
+    }
+
+    return formattedText;
+}
+
 
 // Function to handle chat and questions
 function initializeChatAI() {
