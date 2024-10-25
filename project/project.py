@@ -77,9 +77,6 @@ def get_video_data(video_id):
 def get_openai_response(prompt, video_data):
     video_title, video_description, video_transcript = video_data
 
-    if "transcript" in prompt.lower():
-        return f"Here is the transcript of the video:\n\n{video_transcript}"
-
     conversation_prompt = (
         f"Video Title: {video_title}\n"
         f"Description: {video_description}\n"
@@ -88,7 +85,7 @@ def get_openai_response(prompt, video_data):
     )
 
     response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
+        model="gpt-4o",
         messages=[
             {"role": "system", "content": "You are an AI assistant that answers questions based on the video content."},
             {"role": "user", "content": conversation_prompt}
