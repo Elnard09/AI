@@ -173,6 +173,18 @@ def ask_question():
 def home():
     return render_template('summarizer.html')
 
+@app.route('/login')
+def login():
+    return render_template('login.html')
+
+@app.route('/signup')
+def signup():
+    return render_template('signup.html')
+
+@app.route('/forgotpassword')
+def forgotpassword():
+    return render_template('forgotpassword.html')
+
 @app.route('/chatAI')
 def chatAI():
     return render_template('chatAI.html')
