@@ -229,3 +229,80 @@ nav ul li span.material-symbols-outlined{
     width: 100%;
 }
 
+.modal {
+    display: none; /* Hidden by default */
+    position: fixed; 
+    z-index: 1; 
+    left: 0;
+    top: 0;
+    width: 100%; 
+    height: 100%; 
+    overflow: auto; 
+    background-color: rgb(0,0,0); 
+    background-color: rgba(0,0,0,0.4); 
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 15% auto; 
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%; 
+    max-width: 500px; 
+}
+
+.close-button {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.close-button:hover,
+.close-button:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.btn-for-logoutNEditProfile {
+    margin-top: 20px; /* Space above the button */
+    width: 15%; /* Set width of the button */
+    padding: 12px; /* Inner spacing */
+    border: 2px solid; /* Border style */
+    border-radius: 8px; /* Rounded corners */
+    font-size: 20px; /* Font size */
+    font-weight: 500; /* Font weight */
+    cursor: pointer; /* Pointer cursor on hover */
+    display: flex; /* Flexbox layout */
+    align-items: center; /* Center items vertically */
+    justify-content: center; /* Center items horizontally */
+    gap: 8px; /* Space between flex items */
+    background-color: white; /* Background color */
+    margin-left: auto; /* Centering the button horizontally */
+    margin-right: auto; /* Centering the button horizontally */
+}
+
+.btn-for-logoutNEditProfile:hover {
+    background-color:#808080;
+}
+
+.btn-save-changes {
+    background-color: #007BFF; /* Primary color */
+    color: white; /* Text color */
+    padding: 10px 20px; /* Padding around the text */
+    border: none; /* Remove default border */
+    border-radius: 5px; /* Rounded corners */
+    font-size: 16px; /* Font size */
+    cursor: pointer; /* Pointer cursor on hover */
+    transition: background-color 0.3s ease, transform 0.2s ease; /* Smooth transitions */
+    display: inline-block; /* Align the button inline */
+    margin-left: auto; /* Centering the button horizontally */
+    margin-right: auto; /* Centering the button horizontally */
+}
+
+/* Hover Effects */
+.btn-save-changes:hover {
+    background-color: #0056b3; /* Darker shade on hover */
+    transform: translateY(-2px); /* Slightly lift the button */
+}

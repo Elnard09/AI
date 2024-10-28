@@ -37,6 +37,29 @@
         <main class="main-content">
             <h1>Profile</h1>
             <p>View and edit your profile here.</p>
+            <div>
+                <button id="edit-profile-button" class="btn-for-logoutNEditProfile">Edit Profile</button>
+                
+                <!-- Modal -->
+                <div id="edit-profile-modal" class="modal">
+                    <div class="modal-content">
+                        <span class="close-button" id="close-modal">&times;</span>
+                        <h2>Edit Profile</h2>
+                        <form id="edit-profile-form">
+                            <label for="nickname">Nickname:</label>
+                            <input type="text" id="nickname" name="nickname" required>
+            
+                            <label for="password">New Password:</label>
+                            <input type="password" id="password" name="password" required>
+            
+                            <button type="submit" class="btn-save-changes">Save Changes</button>
+                        </form>
+                    </div>
+                </div>
+            </div>            
+            <div>
+                <button class="btn-for-logoutNEditProfile" id="logout-button"><span class="material-symbols-outlined">logout</span>log out</button>
+            </div>
         </main>
     </div>
     <script src="{{ url_for('static', filename='scrip.js') }}"></script>

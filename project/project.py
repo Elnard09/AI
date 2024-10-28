@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
+from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session
 from googleapiclient.discovery import build
 from youtube_transcript_api import YouTubeTranscriptApi
 import openai
@@ -8,6 +8,7 @@ import os
 import re
 import logging 
 from werkzeug.security import generate_password_hash, check_password_hash
+
 
 load_dotenv()
 
@@ -21,6 +22,8 @@ db = SQLAlchemy(app)
 openai.api_key = os.getenv("OPENAI_API_KEY")
 youtube = build('youtube', 'v3', developerKey=os.getenv("YOUTUBE_API_KEY"))
 app.secret_key = os.getenv("SECRET_KEY")
+# print("Secret Key:", app.secret_key)  # Remove after debugging
+
 
 # Model to store video information
 class YouTubeVideo(db.Model):
@@ -33,6 +36,7 @@ class YouTubeVideo(db.Model):
 class User(db.Model):
         id = db.Column(db.Integer, primary_key=True)
         email = db.Column(db.String(120), unique=True, nullable=False)
+        nickname = db.Column(db.String(50), nullable=False)
         password = db.Column(db.String(200), nullable=False)
 
 # Create the database
@@ -102,6 +106,10 @@ def get_openai_response(prompt, video_data):
     )
     
     return response['choices'][0]['message']['content']
+
+# Function to retrieve a user by ID
+def get_user_by_id(user_id):
+    return User.query.get(user_id)
 
 @app.route('/process_youtube_link', methods=['POST'])
 def process_youtube_link():
@@ -200,8 +208,15 @@ def login():
 def signup():
     if request.method == 'POST':
         email = request.form['email']
+        nickname = request.form['nickname']
         password = request.form['password']
         confirm_password = request.form['confirm_password']
+
+        if not nickname:
+            flash('Nickname is required.', 'error')
+            return redirect(url_for('signup'))
+        
+        print(f"Email: {email}, Nickname: {nickname}, Password: {password}")
 
         # Check if passwords match
         if password != confirm_password:
@@ -216,7 +231,7 @@ def signup():
 
         # Hash the password and create a new user
         hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
-        new_user = User(email=email, password=hashed_password)
+        new_user = User(email=email, nickname = nickname, password=hashed_password)
 
         # Save the new user to the database
         db.session.add(new_user)
@@ -248,7 +263,6 @@ def history():
     # Pass the videos to the template
     return render_template('history.html', videos=videos)
 
-
 @app.route('/help')
 def help():
     return render_template('help.html')
@@ -256,6 +270,15 @@ def help():
 @app.route('/profile')
 def profile():
     return render_template('profile.html')
+
+@app.route('/get_user_data', methods=['GET'])
+def get_user_data():
+    user_id = session.get('user_id')  # Assume user_id is stored in session after login
+    user = get_user_by_id(user_id)  # Replace with your DB query to get user data by ID
+    if user:
+        return f'{{"email": "{user.email}", "nickname": "{user.nickname}"}}'  # Return user data as a string
+    else:
+        return f'{{"error": "User not found"}}', 404
 
 if __name__ == '__main__':
     app.run(debug=True)
