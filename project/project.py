@@ -203,6 +203,7 @@ def signup():
         password = request.form['password']
         confirm_password = request.form['confirm_password']
 
+        # Check if passwords match
         if password != confirm_password:
             flash("Passwords do not match.", "error")
             return redirect(url_for('signup'))
@@ -210,12 +211,14 @@ def signup():
         # Check if the user already exists
         existing_user = User.query.filter_by(email=email).first()
         if existing_user:
-            flash("Email is already registered.", "error")
+            flash("Email already registered.", "error")
             return redirect(url_for('signup'))
 
-        # Hash the password and save the new user
-        password = generate_password_hash(request.form['password'])
-        new_user = User(email=email, password=password)
+        # Hash the password and create a new user
+        hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
+        new_user = User(email=email, password=hashed_password)
+
+        # Save the new user to the database
         db.session.add(new_user)
         db.session.commit()
 
@@ -223,7 +226,6 @@ def signup():
         return redirect(url_for('login'))
 
     return render_template('signup.html')
-
 
 
 @app.route('/forgotpassword')
