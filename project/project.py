@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
 from googleapiclient.discovery import build
 from youtube_transcript_api import YouTubeTranscriptApi
 import openai
@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 import os
 import re
 import logging 
+from werkzeug.security import generate_password_hash, check_password_hash
 
 load_dotenv()
 
@@ -19,6 +20,7 @@ db = SQLAlchemy(app)
 # Your API Keys (make sure to keep them secure!)
 openai.api_key = os.getenv("OPENAI_API_KEY")
 youtube = build('youtube', 'v3', developerKey=os.getenv("YOUTUBE_API_KEY"))
+app.secret_key = os.getenv("SECRET_KEY")
 
 # Model to store video information
 class YouTubeVideo(db.Model):
@@ -28,9 +30,15 @@ class YouTubeVideo(db.Model):
     description = db.Column(db.Text, nullable=False)
     transcript = db.Column(db.Text, nullable=False)
 
+class User(db.Model):
+        id = db.Column(db.Integer, primary_key=True)
+        email = db.Column(db.String(120), unique=True, nullable=False)
+        password = db.Column(db.String(200), nullable=False)
+
 # Create the database
 with app.app_context():
     db.create_all()
+    
     
 def extract_video_id(youtube_link):
     # Regular expression to extract the video ID from various YouTube URL formats
@@ -171,15 +179,52 @@ def ask_question():
 # Main route to render the interface
 @app.route('/')
 def home():
-    return render_template('summarizer.html')
-
-@app.route('/login')
-def login():
     return render_template('login.html')
 
-@app.route('/signup')
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+        user = User.query.filter_by(email=email).first()
+        
+        if user and check_password_hash(user.password, password):
+            flash("Logged in successfully!", "success")
+            return redirect(url_for('summarizer'))  # Redirect to summarizer page
+        else:
+            flash("Invalid email or password.", "error")
+    
+    return render_template('login.html')
+
+@app.route('/signup', methods=['GET', 'POST'])
 def signup():
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+        confirm_password = request.form['confirm_password']
+
+        if password != confirm_password:
+            flash("Passwords do not match.", "error")
+            return redirect(url_for('signup'))
+
+        # Check if the user already exists
+        existing_user = User.query.filter_by(email=email).first()
+        if existing_user:
+            flash("Email is already registered.", "error")
+            return redirect(url_for('signup'))
+
+        # Hash the password and save the new user
+        password = generate_password_hash(request.form['password'])
+        new_user = User(email=email, password=password)
+        db.session.add(new_user)
+        db.session.commit()
+
+        flash("Account created successfully!", "success")
+        return redirect(url_for('login'))
+
     return render_template('signup.html')
+
+
 
 @app.route('/forgotpassword')
 def forgotpassword():
