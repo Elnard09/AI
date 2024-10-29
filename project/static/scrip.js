@@ -506,5 +506,40 @@ function reinteractSession(date) {
     }
 }
 
+// Modal functionality
+const editProfileButton = document.getElementById('edit-profile-button');
+const modal = document.getElementById('edit-profile-modal');
+const closeModalButton = document.getElementById('close-modal');
+
+// Show modal on button click
+editProfileButton.addEventListener('click', () => {
+    modal.style.display = 'block';
+});
+
+// Hide modal when the close button is clicked
+closeModalButton.addEventListener('click', () => {
+    modal.style.display = 'none';
+});
+
+// Hide modal when clicking outside of the modal
+window.addEventListener('click', (event) => {
+    if (event.target === modal) {
+        modal.style.display = 'none';
+    }
+});
+
+// Handle form submission
+document.getElementById('edit-profile-form').addEventListener('submit', function(event) {
+    event.preventDefault(); // Prevent the default form submission
+    const nickname = document.getElementById('nickname').value;
+    const password = document.getElementById('password').value;
+
+    // Here you can add the logic to save the changes (e.g., AJAX call)
+    console.log(`Nickname: ${nickname}, Password: ${password}`);
+
+    // Close the modal after saving
+    modal.style.display = 'none';
+});
+
 // Call initialize function on page load
 initializePage();
