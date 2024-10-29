@@ -541,5 +541,14 @@ document.getElementById('edit-profile-form').addEventListener('submit', function
     modal.style.display = 'none';
 });
 
+document.addEventListener("DOMContentLoaded", function() {
+    const flashMessages = document.querySelectorAll(".flash-message");
+    flashMessages.forEach(message => {
+        setTimeout(() => {
+            message.style.display = "none";
+        }, 1000); // Adjust duration as needed
+    });
+});
+
 // Call initialize function on page load
 initializePage();

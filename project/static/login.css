@@ -154,3 +154,12 @@ input:focus {
     width: 20px;
     height: 20px;
 }
+
+.flash-message {
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 5px;
+    color: #fff;
+}
+.flash-message.error { background-color: #e74c3c; } /* Red for errors */
+.flash-message.success { background-color: #2ecc71; } /* Green for success */
