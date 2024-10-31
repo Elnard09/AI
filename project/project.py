@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session
+from flask_login import login_required, LoginManager, UserMixin, logout_user
 from googleapiclient.discovery import build
 from youtube_transcript_api import YouTubeTranscriptApi
 import openai
@@ -12,6 +13,8 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 load_dotenv()
 
+
+
 # Initialize Flask and the database
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///youtube_videos.db'
@@ -24,6 +27,11 @@ youtube = build('youtube', 'v3', developerKey=os.getenv("YOUTUBE_API_KEY"))
 app.secret_key = os.getenv("SECRET_KEY")
 # print("Secret Key:", app.secret_key)  # Remove after debugging
 
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+login_manager.login_message_category = 'info'  # Optional: Sets flash message category
+
 
 # Model to store video information
 class YouTubeVideo(db.Model):
@@ -33,11 +41,11 @@ class YouTubeVideo(db.Model):
     description = db.Column(db.Text, nullable=False)
     transcript = db.Column(db.Text, nullable=False)
 
-class User(db.Model):
-        id = db.Column(db.Integer, primary_key=True)
-        email = db.Column(db.String(120), unique=True, nullable=False)
-        nickname = db.Column(db.String(50), nullable=False)
-        password = db.Column(db.String(200), nullable=False)
+class User(db.Model, UserMixin):
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    nickname = db.Column(db.String(50), nullable=False)
+    password = db.Column(db.String(200), nullable=False)
 
 # Create the database
 with app.app_context():
@@ -189,6 +197,8 @@ def ask_question():
 def home():
     return render_template('login.html')
 
+from flask_login import login_user
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -197,12 +207,14 @@ def login():
         user = User.query.filter_by(email=email).first()
         
         if user and check_password_hash(user.password, password):
+            login_user(user)
             flash("Logged in successfully!", "success")
-            return redirect(url_for('summarizer'))  # Redirect to summarizer page
+            return redirect(url_for('summarizer'))
         else:
             flash("Invalid email or password.", "error")
     
     return render_template('login.html')
+
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
@@ -248,14 +260,17 @@ def forgotpassword():
     return render_template('forgotpassword.html')
 
 @app.route('/chatAI')
+@login_required
 def chatAI():
     return render_template('chatAI.html')
 
 @app.route('/summarizer')
+@login_required
 def summarizer():
     return render_template('summarizer.html')
 
 @app.route('/history')
+@login_required
 def history():
     # Query the database for all videos
     videos = YouTubeVideo.query.all()
@@ -264,10 +279,12 @@ def history():
     return render_template('history.html', videos=videos)
 
 @app.route('/help')
+@login_required
 def help():
     return render_template('help.html')
 
 @app.route('/profile')
+@login_required
 def profile():
     return render_template('profile.html')
 
@@ -279,6 +296,17 @@ def get_user_data():
         return f'{{"email": "{user.email}", "nickname": "{user.nickname}"}}'  # Return user data as a string
     else:
         return f'{{"error": "User not found"}}', 404
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))  # Replace User with your user model
+
+@app.route('/logout')
+def logout():
+    logout_user()  # This will log the user out
+    flash("You have been logged out.", "info")
+    return redirect(url_for('login'))
+
 
 if __name__ == '__main__':
     app.run(debug=True)
