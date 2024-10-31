@@ -1,57 +1,114 @@
-// Common sidebar functionality for all pages
-document.getElementById('toggle-btn').addEventListener('click', function() {
-    const sidebar = document.getElementById('sidebar');
+// Wait for DOM to be fully loaded before initializing
+document.addEventListener("DOMContentLoaded", function() {
+    // Initialize all functionality
+    initializePage();
+    initializeModalFunctionality();
+    initializeFlashMessages();
+    initializeSidebarFunctionality();
+    initializeNavigationListeners();
+});
+
+// Modal functionality
+function initializeModalFunctionality() {
+    const editProfileButton = document.getElementById('edit-profile-button');
+    const modal = document.getElementById('edit-profile-modal');
+    const closeModalButton = document.getElementById('close-modal');
+    const editProfileForm = document.getElementById('edit-profile-form');
+
+    if (editProfileButton && modal && closeModalButton) {
+        // Show modal on button click
+        editProfileButton.addEventListener('click', () => {
+            modal.style.display = 'block';
+        });
+
+        // Hide modal when the close button is clicked
+        closeModalButton.addEventListener('click', () => {
+            modal.style.display = 'none';
+        });
+
+        // Hide modal when clicking outside
+        window.addEventListener('click', (event) => {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+
+        // Handle form submission
+        if (editProfileForm) {
+            editProfileForm.addEventListener('submit', function(event) {
+                event.preventDefault();
+                const nickname = document.getElementById('nickname').value;
+                const password = document.getElementById('password').value;
+                console.log(`Nickname: ${nickname}, Password: ${password}`);
+                modal.style.display = 'none';
+            });
+        }
+    }
+}
+
+// Flash messages functionality
+function initializeFlashMessages() {
+    const flashMessages = document.querySelectorAll(".flash-message");
+    flashMessages.forEach(message => {
+        setTimeout(() => {
+            message.style.display = "none";
+        }, 1000);
+    });
+}
+
+// Sidebar functionality
+function initializeSidebarFunctionality() {
     const toggleBtn = document.getElementById('toggle-btn');
-
-    sidebar.classList.toggle('collapsed');
-
-    if (sidebar.classList.contains('collapsed')) {
-        toggleBtn.style.right = '5px';
-    } else {
-        toggleBtn.style.right = '20px';
-    }
-});
-
-// Add event listeners for summarizer navigation
-const summarizerIds = ['nav-summarizer', 'summarizer-btn'];
-summarizerIds.forEach(function(id) {
-    const element = document.getElementById(id);
-    if (element) {
-        element.addEventListener('click', function() {
-            window.location.href = '/summarizer';
+    const sidebar = document.getElementById('sidebar');
+    
+    if (toggleBtn && sidebar) {
+        toggleBtn.addEventListener('click', function() {
+            sidebar.classList.toggle('collapsed');
+            toggleBtn.style.right = sidebar.classList.contains('collapsed') ? '5px' : '20px';
         });
     }
-});
+}
 
-// Add event listeners for files navigation
-const filesIds = ['nav-files', 'file-btn'];
-filesIds.forEach(function(id) {
-    const element = document.getElementById(id);
-    if (element) {
-        element.addEventListener('click', function() {
-            window.location.href = '/files';
-        });
+// Navigation functionality
+function initializeNavigationListeners() {
+    // Summarizer navigation
+    const summarizerIds = ['nav-summarizer', 'summarizer-btn'];
+    summarizerIds.forEach(function(id) {
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener('click', () => window.location.href = '/summarizer');
+        }
+    });
+
+    // Files navigation
+    const filesIds = ['nav-files', 'file-btn'];
+    filesIds.forEach(function(id) {
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener('click', () => window.location.href = '/files');
+        }
+    });
+
+    // History navigation
+    const historyIds = ['nav-history', 'history-btn'];
+    historyIds.forEach(function(id) {
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener('click', () => window.location.href = '/history');
+        }
+    });
+
+    // Help and Profile navigation
+    const navHelp = document.getElementById('nav-help');
+    const userProfile = document.getElementById('user-profile');
+    
+    if (navHelp) {
+        navHelp.addEventListener('click', () => window.location.href = '/help');
     }
-});
-
-// Add event listeners for history navigation
-const historyIds = ['nav-history', 'history-btn'];
-historyIds.forEach(function(id) {
-    const element = document.getElementById(id);
-    if (element) {
-        element.addEventListener('click', function() {
-            window.location.href = '/history';
-        });
+    if (userProfile) {
+        userProfile.addEventListener('click', () => window.location.href = '/profile');
     }
-});
-
-document.getElementById('nav-help').addEventListener('click', function() {
-    window.location.href = '/help';
-});
-
-document.getElementById('user-profile').addEventListener('click', function() {
-    window.location.href = '/profile';
-});
+}
 
 // Function to validate YouTube URL
 function isValidYoutubeUrl(url) {
@@ -505,50 +562,6 @@ function reinteractSession(date) {
         window.location.href = '/chatAI.html';
     }
 }
-
-// Modal functionality
-const editProfileButton = document.getElementById('edit-profile-button');
-const modal = document.getElementById('edit-profile-modal');
-const closeModalButton = document.getElementById('close-modal');
-
-// Show modal on button click
-editProfileButton.addEventListener('click', () => {
-    modal.style.display = 'block';
-});
-
-// Hide modal when the close button is clicked
-closeModalButton.addEventListener('click', () => {
-    modal.style.display = 'none';
-});
-
-// Hide modal when clicking outside of the modal
-window.addEventListener('click', (event) => {
-    if (event.target === modal) {
-        modal.style.display = 'none';
-    }
-});
-
-// Handle form submission
-document.getElementById('edit-profile-form').addEventListener('submit', function(event) {
-    event.preventDefault(); // Prevent the default form submission
-    const nickname = document.getElementById('nickname').value;
-    const password = document.getElementById('password').value;
-
-    // Here you can add the logic to save the changes (e.g., AJAX call)
-    console.log(`Nickname: ${nickname}, Password: ${password}`);
-
-    // Close the modal after saving
-    modal.style.display = 'none';
-});
-
-document.addEventListener("DOMContentLoaded", function() {
-    const flashMessages = document.querySelectorAll(".flash-message");
-    flashMessages.forEach(message => {
-        setTimeout(() => {
-            message.style.display = "none";
-        }, 1000); // Adjust duration as needed
-    });
-});
 
 // Call initialize function on page load
 initializePage();
