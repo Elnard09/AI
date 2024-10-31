@@ -307,6 +307,29 @@ def logout():
     flash("You have been logged out.", "info")
     return redirect(url_for('login'))
 
+from flask import jsonify
+from flask_login import current_user
+from werkzeug.security import generate_password_hash
+
+@app.route('/update_profile', methods=['POST'])
+@login_required
+def update_profile():
+    data = request.get_json()
+    new_nickname = data.get('nickname')
+
+    # Validate inputs
+    if not new_nickname:
+        return jsonify({'error': 'New nickname is required.'}), 400
+
+    # Update user information
+    current_user.nickname = new_nickname
+    
+    # Commit the changes to the database
+    db.session.commit()
+    
+    return jsonify({'message': 'Profile updated successfully.'})
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)

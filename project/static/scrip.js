@@ -589,8 +589,7 @@ function reinteractSession(date) {
     }
 }
 
-<<<<<<< Updated upstream
-=======
+
 // Modal functionality
 const editProfileButton = document.getElementById('edit-profile-button');
 const modal = document.getElementById('edit-profile-modal');
@@ -646,6 +645,5 @@ document.getElementById("logout-button").addEventListener("click", function () {
 });
 
 
->>>>>>> Stashed changes
 // Call initialize function on page load
 initializePage();
