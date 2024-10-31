@@ -38,23 +38,39 @@
             <h1>Profile</h1>
             <p>View and edit your profile here.</p>
             <div>
-                <button id="edit-profile-button" class="btn-for-logoutNEditProfile">Edit Profile</button>
-                
-                <!-- Modal -->
-                <div id="edit-profile-modal" class="modal">
+                <button id="edit-nickname-button" class="btn-for-logoutNEditProfile">Change Nickname</button>
+                <!-- Modal for Nickname -->
+                <div id="edit-nickname-modal" class="modal">
                     <div class="modal-content">
-                        <span class="close-button" id="close-modal">&times;</span>
-                        <h2>Edit Profile</h2>
-                        <form id="edit-profile-form">
+                        <span class="close-button" id="close-nickname-modal">&times;</span>
+                        <h2>Change Nickname</h2>
+                        <form id="edit-nickname-form">
                             <label for="nickname">Nickname:</label>
                             <input type="text" id="nickname" name="nickname" required>
+                            <button type="submit" class="btn">Save Changes</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <div>
+                <button id="edit-password-button" class="btn-for-logoutNEditProfile">Change Password</button>
+                <!-- Modal for Password -->
+                <div id="edit-password-modal" class="modal">
+                    <div class="modal-content">
+                        <span class="close-button" id="close-password-modal">&times;</span>
+                        <h2>Change Password</h2>
+                        <form id="edit-password-form">
                             <label for="password">New Password:</label>
                             <input type="password" id="password" name="password" required>
+                            <label for="verify-password">Verify Password:</label>
+                            <input type="password" id="verify-password" name="verify-password" required>
                             <button type="submit" class="btn">Save Changes</button>
                         </form>
                     </div>
                 </div>
             </div>            
+
             <div>
                 <button class="btn-for-logoutNEditProfile" id="logout-button"><span class="material-symbols-outlined">Logout</span>log out</button>
             </div>
