@@ -10,39 +10,65 @@ document.addEventListener("DOMContentLoaded", function() {
 
 // Modal functionality
 function initializeModalFunctionality() {
-    const editProfileButton = document.getElementById('edit-profile-button');
-    const modal = document.getElementById('edit-profile-modal');
-    const closeModalButton = document.getElementById('close-modal');
-    const editProfileForm = document.getElementById('edit-profile-form');
+    // Nickname modal elements
+    const nicknameButton = document.getElementById('edit-nickname-button');
+    const nicknameModal = document.getElementById('edit-nickname-modal');
+    const closeNicknameModalButton = document.getElementById('close-nickname-modal');
+    const nicknameForm = document.getElementById('edit-nickname-form');
 
-    if (editProfileButton && modal && closeModalButton) {
-        // Show modal on button click
-        editProfileButton.addEventListener('click', () => {
-            modal.style.display = 'block';
+    // Password modal elements
+    const passwordButton = document.getElementById('edit-password-button');
+    const passwordModal = document.getElementById('edit-password-modal');
+    const closePasswordModalButton = document.getElementById('close-password-modal');
+    const passwordForm = document.getElementById('edit-password-form');
+
+    // Nickname Modal Events
+    if (nicknameButton && nicknameModal && closeNicknameModalButton) {
+        nicknameButton.addEventListener('click', () => {
+            nicknameModal.style.display = 'block';
         });
 
-        // Hide modal when the close button is clicked
-        closeModalButton.addEventListener('click', () => {
-            modal.style.display = 'none';
+        closeNicknameModalButton.addEventListener('click', () => {
+            nicknameModal.style.display = 'none';
         });
 
-        // Hide modal when clicking outside
         window.addEventListener('click', (event) => {
-            if (event.target === modal) {
-                modal.style.display = 'none';
+            if (event.target === nicknameModal) {
+                nicknameModal.style.display = 'none';
             }
         });
 
-        // Handle form submission
-        if (editProfileForm) {
-            editProfileForm.addEventListener('submit', function(event) {
-                event.preventDefault();
-                const nickname = document.getElementById('nickname').value;
-                const password = document.getElementById('password').value;
-                console.log(`Nickname: ${nickname}, Password: ${password}`);
-                modal.style.display = 'none';
-            });
-        }
+        nicknameForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            const nickname = document.getElementById('nickname').value;
+            console.log(`Nickname: ${nickname}`);
+            nicknameModal.style.display = 'none';
+        });
+    }
+
+    // Password Modal Events
+    if (passwordButton && passwordModal && closePasswordModalButton) {
+        passwordButton.addEventListener('click', () => {
+            passwordModal.style.display = 'block';
+        });
+
+        closePasswordModalButton.addEventListener('click', () => {
+            passwordModal.style.display = 'none';
+        });
+
+        window.addEventListener('click', (event) => {
+            if (event.target === passwordModal) {
+                passwordModal.style.display = 'none';
+            }
+        });
+
+        passwordForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            const password = document.getElementById('password').value;
+            const verifyPassword = document.getElementById('verify-password').value;
+            console.log(`Password: ${password}, Verify Password: ${verifyPassword}`);
+            passwordModal.style.display = 'none';
+        });
     }
 }
 
