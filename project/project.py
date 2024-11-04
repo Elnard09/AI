@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session
-from flask_login import login_required, LoginManager, UserMixin, logout_user
+from flask_login import login_required, LoginManager, UserMixin, logout_user, current_user
 from googleapiclient.discovery import build
 from youtube_transcript_api import YouTubeTranscriptApi
 import openai
@@ -303,13 +303,9 @@ def load_user(user_id):
 
 @app.route('/logout')
 def logout():
-    logout_user()  # This will log the user out
+    logout_user()
     flash("You have been logged out.", "info")
     return redirect(url_for('login'))
-
-from flask import jsonify
-from flask_login import current_user
-from werkzeug.security import generate_password_hash
 
 @app.route('/update_profile', methods=['POST'])
 @login_required

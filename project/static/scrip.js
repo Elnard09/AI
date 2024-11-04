@@ -634,15 +634,19 @@ document.addEventListener("DOMContentLoaded", function() {
     });
 });
 
-document.getElementById("logout-button").addEventListener("click", function () {
-    fetch("/logout", { method: "GET" })
-        .then(response => {
-            if (response.redirected) {
-                window.location.href = response.url;  // Redirect to the login page
-            }
-        })
-        .catch(error => console.error("Error logging out:", error));
+document.addEventListener("DOMContentLoaded", function () {
+    document.getElementById("logout-button").addEventListener("click", function () {
+        fetch("/logout", { method: "GET" })
+            .then(response => {
+                if (response.redirected) {
+                    window.location.href = response.url;  // Redirect to the login page
+                }
+            })
+            .catch(error => console.error("Error logging out:", error));
+    });
 });
+
+
 
 
 // Call initialize function on page load
