@@ -26,8 +26,8 @@
                 <div class="profile-section" id="user-profile">
                     <img src="{{ url_for('static', filename='image/img_avatar.png') }}" alt="avatar icon" class="avatar">
                     <div class="profile-title">
-                        <p id="USERTITLE">Default Nickname</p>
-                        <p id="USEREMAIL">Default Email</p>
+                        <p id="USERTITLE">{{ nickname }}</p> <!-- Dynamic Nickname -->
+                        <p id="USEREMAIL">{{ email }}</p>
                     </div>
                 </div>
             </div>

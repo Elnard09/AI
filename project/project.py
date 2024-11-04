@@ -262,12 +262,12 @@ def forgotpassword():
 @app.route('/chatAI')
 @login_required
 def chatAI():
-    return render_template('chatAI.html')
+    return render_template('chatAI.html', nickname=current_user.nickname, email=current_user.email)
 
 @app.route('/summarizer')
 @login_required
 def summarizer():
-    return render_template('summarizer.html')
+    return render_template('summarizer.html', nickname=current_user.nickname, email=current_user.email)
 
 @app.route('/history')
 @login_required
@@ -276,17 +276,17 @@ def history():
     videos = YouTubeVideo.query.all()
     
     # Pass the videos to the template
-    return render_template('history.html', videos=videos)
+    return render_template('history.html', videos=videos, nickname=current_user.nickname, email=current_user.email)
 
 @app.route('/help')
 @login_required
 def help():
-    return render_template('help.html')
+    return render_template('help.html', nickname=current_user.nickname, email=current_user.email)
 
 @app.route('/profile')
 @login_required
 def profile():
-    return render_template('profile.html')
+    return render_template('profile.html', nickname=current_user.nickname, email=current_user.email)
 
 @app.route('/get_user_data', methods=['GET'])
 def get_user_data():
@@ -307,23 +307,45 @@ def logout():
     flash("You have been logged out.", "info")
     return redirect(url_for('login'))
 
-@app.route('/update_profile', methods=['POST'])
+@app.route('/update_nickname', methods=['POST'])
 @login_required
-def update_profile():
+def update_nickname():
     data = request.get_json()
-    new_nickname = data.get('nickname')
+    new_nickname = data.get('nickname', nickname=current_user.nickname, email=current_user.email)
 
-    # Validate inputs
+    # Validate input
     if not new_nickname:
         return jsonify({'error': 'New nickname is required.'}), 400
 
-    # Update user information
+    # Update the user's nickname
     current_user.nickname = new_nickname
-    
-    # Commit the changes to the database
     db.session.commit()
-    
-    return jsonify({'message': 'Profile updated successfully.'})
+
+    return jsonify({'message': 'Nickname updated successfully.'})
+
+
+@app.route('/update_password', methods=['POST'])
+@login_required
+def update_password():
+    data = request.get_json()
+    current_password = data.get('current_password')
+    new_password = data.get('new_password')
+    confirm_new_password = data.get('confirm_new_password')
+
+    # Validate inputs
+    if not current_password or not new_password or not confirm_new_password:
+        return jsonify({'error': 'All password fields are required.'}), 400
+    if new_password != confirm_new_password:
+        return jsonify({'error': 'New passwords do not match.'}), 400
+    if not check_password_hash(current_user.password, current_password):
+        return jsonify({'error': 'Current password is incorrect.'}), 400
+
+    # Update the password
+    current_user.password = generate_password_hash(new_password, method='pbkdf2:sha256')
+    db.session.commit()
+
+    return jsonify({'message': 'Password updated successfully.'})
+
 
 
 
