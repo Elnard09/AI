@@ -38,18 +38,20 @@
             <h1><span class="material-symbols-outlined">schedule</span>History</h1>
             <p>See the chats you created</p>
             
-            <table>
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Message</th>
-                        <th>AI Response</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="chat-history"></tbody>
-            </table>
-            <div class="no-data" id="no-data-message" style="display: none;">No chat history found.</div>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Title</th>
+                            <th>Description</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="chat-history"></tbody>
+                </table>
+                <div  class="no-data" id="no-data-message" style="display: none;">No chat history found.</div>
+            </div>
         </div>
     </div>
     <script src="{{ url_for('static', filename='scrip.js') }}"></script>

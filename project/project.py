@@ -47,6 +47,15 @@ class User(db.Model, UserMixin):
     nickname = db.Column(db.String(50), nullable=False)
     password = db.Column(db.String(200), nullable=False)
 
+class ChatSession(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    date = db.Column(db.DateTime, nullable=False)
+    title = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+
+    def __repr__(self):
+        return f"ChatSession(id={self.id}, date='{self.date}', title='{self.title}', description='{self.description}')"
+
 # Create the database
 with app.app_context():
     db.create_all()
@@ -304,7 +313,7 @@ def load_user(user_id):
 @app.route('/logout')
 def logout():
     logout_user()
-    flash("You have been logged out.", "info")
+    flash("You have been logged out.", "success")
     return redirect(url_for('login'))
 
 @app.route('/update_nickname', methods=['POST'])
@@ -346,7 +355,16 @@ def update_password():
 
     return jsonify({'message': 'Password updated successfully.'})
 
-
+@app.route('/chat-sessions')
+def get_chat_sessions():
+    sessions = ChatSession.query.all()
+    return jsonify([
+        {
+            'date': session.date.strftime('%Y-%m-%d %H:%M:%S'),
+            'title': session.title,
+            'description': session.description
+        } for session in sessions
+    ])
 
 
 if __name__ == '__main__':
