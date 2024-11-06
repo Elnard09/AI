@@ -6,7 +6,6 @@ document.addEventListener("DOMContentLoaded", function() {
     initializeFlashMessages();
     initializeSidebarFunctionality();
     initializeNavigationListeners();
-    const { displayChatHistory, saveSession, deleteSession, reinteractSession } = initializeChatHistoryFunctions();
 });
 
 // Modal functionality
@@ -137,88 +136,6 @@ function initializeNavigationListeners() {
     }
 }
 
-// Chat history-related functionality
-function initializeChatHistoryFunctions() {
-    // Function to display chat history
-    function displayChatHistory() {
-        const chatHistoryContainer = document.getElementById('chat-history');
-        const noDataMessage = document.getElementById('no-data-message');
-
-        fetch('/chat-sessions')
-            .then(response => response.json())
-            .then(sessions => {
-                if (sessions.length === 0) {
-                    noDataMessage.style.display = 'block';
-                } else {
-                    noDataMessage.style.display = 'none';
-                    sessions.forEach(session => {
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td>${session.date}</td>
-                            <td>${session.title}</td>
-                            <td>${session.description}</td>
-                            <td>
-                                <button type="button" class="action-button" onclick="reinteractSession('${session.date}')">
-                                    <span class="material-symbols-outlined">chat</span>
-                                </button>
-                                <button type="button" class="action-button" onclick="deleteSession('${session.date}')">
-                                    <span class="material-symbols-observed">delete</span>
-                                </button>
-                            </td>
-                        `;
-                        chatHistoryContainer.appendChild(row);
-                    });
-                }
-            })
-            .catch(error => {
-                console.error('Error fetching chat history:', error);
-                noDataMessage.style.display = 'block';
-            });
-    }
-
-    // Function to delete a session
-    function deleteSession(date) {
-        fetch(`/delete-chat-session/${date}`, {
-            method: 'DELETE',
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                console.log('Session deleted successfully.');
-                window.location.reload(); // Reload the page to update the table
-            } else {
-                console.error('Error deleting session:', data.error);
-            }
-        })
-        .catch(error => {
-            console.error('Error deleting session:', error);
-        });
-    }
-
-    // Function to re-interact with a session
-    function reinteractSession(date) {
-        fetch(`/get-chat-session/${date}`)
-        .then(response => response.json())
-        .then(session => {
-            if (session) {
-                // Redirect to chatAI.html with session data, e.g., using URL parameters
-                sessionStorage.setItem('currentSession', JSON.stringify(session));
-                window.location.href = '/chatAI';
-            }
-        })
-        .catch(error => {
-            console.error('Error fetching session:', error);
-        });
-    }
-
-    // Return the functions so they can be used elsewhere
-    return {
-        displayChatHistory,
-        deleteSession,
-        reinteractSession
-    };
-}
-
 // Function to validate YouTube URL
 function isValidYoutubeUrl(url) {
     const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+/;
@@ -253,7 +170,6 @@ function showError(message) {
     }, 3000);
 }
 
-// Function to save session data
 function saveSessionToDatabase(date, title, description) {
     fetch('/save-chat-session', {
         method: 'POST',
@@ -275,7 +191,6 @@ function saveSessionToDatabase(date, title, description) {
     });
 }
 
-// Function to retrieve and display chat history
 function displayChatHistory() {
     const chatHistoryContainer = document.getElementById('chat-history');
     const noDataMessage = document.getElementById('no-data-message');
@@ -312,7 +227,21 @@ function displayChatHistory() {
         });
 }
 
-// Function to delete a session
+function reinteractSession(date) {
+    fetch(`/get-chat-session/${date}`)
+    .then(response => response.json())
+    .then(session => {
+        if (session) {
+            // Redirect to chatAI.html with session data, e.g., using URL parameters
+            sessionStorage.setItem('currentSession', JSON.stringify(session));
+            window.location.href = '/chatAI';
+        }
+    })
+    .catch(error => {
+        console.error('Error fetching session:', error);
+    });
+}
+
 function deleteSession(date) {
     fetch(`/delete-chat-session/${date}`, {
         method: 'DELETE',
@@ -331,22 +260,6 @@ function deleteSession(date) {
     });
 }
 
-// Function to re-interact with a session
-function reinteractSession(date) {
-    fetch(`/get-chat-session/${date}`)
-    .then(response => response.json())
-    .then(session => {
-        if (session) {
-            // Redirect to chatAI.html with session data, e.g., using URL parameters
-            sessionStorage.setItem('currentSession', JSON.stringify(session));
-            window.location.href = '/chatAI';
-        }
-    })
-    .catch(error => {
-        console.error('Error fetching session:', error);
-    });
-}
-
 // Function to save the current chat session
 function saveCurrentChatSession() {
     const currentSession = {
@@ -355,15 +268,26 @@ function saveCurrentChatSession() {
         description: 'Description of the current chat session',
     };
 
-    saveSessionToDatabase(
-        currentSession.date,
-        currentSession.title,
-        currentSession.description
-    );
+    fetch('/save-chat-session', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(currentSession),
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log('Session saved to database successfully.');
+        } else {
+            console.error('Error saving session to database:', data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error saving session to database:', error);
+    });
 }
 
-// Function to check which page we're on and initialize accordingly
-// Function to check which page we're on and initialize accordingly
 function initializePage() {
     const currentPath = window.location.pathname;
     const submitBtn = document.getElementById('submit-chat-ai-button');
@@ -384,7 +308,7 @@ function initializePage() {
                 }
                 summarizeVideo(inputText);
                 saveCurrentChatSession(); // Save the current chat session
-            } else {
+            } else if (currentPath.includes('/chatAI')) {
                 if (inputText) {
                     sessionStorage.setItem('initialMessage', inputText);
                     sessionStorage.setItem('sourcePage', currentPath);
@@ -405,7 +329,6 @@ function initializePage() {
         initializeChatAI();
         saveCurrentChatSession(); // Save the current chat session
     } else if (currentPath.includes('/history')) {
-        const { displayChatHistory } = initializeChatHistoryFunctions();
         displayChatHistory();
     }
 }

@@ -355,7 +355,20 @@ def update_password():
 
     return jsonify({'message': 'Password updated successfully.'})
 
-@app.route('/chat-sessions')
+@app.route('/save-chat-session', methods=['POST'])
+def save_chat_session():
+    data = request.get_json()
+    date = data['date']
+    title = data['title']
+    description = data['description']
+
+    session = ChatSession(date=date, title=title, description=description)
+    db.session.add(session)
+    db.session.commit()
+
+    return jsonify({'success': True})
+
+@app.route('/chat-sessions', methods=['GET'])
 def get_chat_sessions():
     sessions = ChatSession.query.all()
     return jsonify([
@@ -365,6 +378,28 @@ def get_chat_sessions():
             'description': session.description
         } for session in sessions
     ])
+
+@app.route('/delete-chat-session/<date>', methods=['DELETE'])
+def delete_chat_session(date):
+    session = ChatSession.query.filter_by(date=date).first()
+    if session:
+        db.session.delete(session)
+        db.session.commit()
+        return jsonify({'success': True})
+    else:
+        return jsonify({'error': 'Session not found'}), 404
+
+@app.route('/get-chat-session/<date>', methods=['GET'])
+def get_chat_session(date):
+    session = ChatSession.query.filter_by(date=date).first()
+    if session:
+        return jsonify({
+            'date': session.date.strftime('%Y-%m-%d %H:%M:%S'),
+            'title': session.title,
+            'description': session.description
+        })
+    else:
+        return jsonify({'error': 'Session not found'}), 404
 
 
 if __name__ == '__main__':
