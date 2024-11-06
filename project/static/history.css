@@ -223,21 +223,72 @@ nav ul li span.material-symbols-outlined{
 }
 
 /* Table Styles */
-table {
-    width: 100%;
-    border-collapse: collapse;
+.table-responsive {
+    border: 1px solid #ddd;
+    border-radius: 8px;
     margin-top: 20px;
+    background-color: #fff;
 }
 
-th, td {
-    padding: 10px;
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed; /* Ensures columns have the same width across thead and tbody */
+    background-color: #fff;
+}
+
+.table th, .table td {
+    padding: 12px 15px;
     text-align: left;
     border-bottom: 1px solid #ddd;
 }
 
-th {
+.table th {
     background-color: #6d28d9;
     color: white;
+    font-weight: bold;
+}
+
+/* Ensure column widths are the same across thead and tbody */
+.table th:nth-child(1),
+.table td:nth-child(1) {
+    width: 25%; /* Adjust the width as needed for the first column */
+}
+
+.table th:nth-child(2),
+.table td:nth-child(2) {
+    width: 20%; /* Adjust the width as needed for the second column */
+}
+
+.table th:nth-child(3),
+.table td:nth-child(3) {
+    width: 40%; /* Adjust the width as needed for the third column */
+}
+
+.table th:nth-child(4),
+.table td:nth-child(4) {
+    width: 15%; /* Adjust the width as needed for the fourth column */
+}
+
+/* Make tbody scrollable */
+tbody#chat-history {
+    display: block;
+    max-height: 470px; /* Adjust as needed */
+    overflow-y: auto;
+    width: 100%;
+}
+
+/* Ensure columns align in both thead and tbody */
+thead, tbody#chat-history tr {
+    display: table;
+    width: 100%;
+    table-layout: auto; /* Ensures columns align across header and body */
+}
+
+/* Styling for table cells within tbody */
+tbody#chat-history td {
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
 }
 
 .action-button {

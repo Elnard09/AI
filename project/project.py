@@ -9,6 +9,8 @@ import os
 import re
 import logging 
 from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime
+
 
 
 load_dotenv()
@@ -358,15 +360,23 @@ def update_password():
 @app.route('/save-chat-session', methods=['POST'])
 def save_chat_session():
     data = request.get_json()
-    date = data['date']
+    date_str = data['date']
     title = data['title']
     description = data['description']
 
-    session = ChatSession(date=date, title=title, description=description)
+    # Convert date_str to a datetime object
+    try:
+        date_obj = datetime.strptime(date_str, '%m/%d/%Y, %I:%M:%S %p')
+    except ValueError as e:
+        return {"error": f"Invalid date format: {e}"}, 400
+
+    # Use date_obj instead of date_str when creating the ChatSession
+    session = ChatSession(date=date_obj, title=title, description=description)
     db.session.add(session)
     db.session.commit()
+    
+    return {"success": True}
 
-    return jsonify({'success': True})
 
 @app.route('/chat-sessions', methods=['GET'])
 def get_chat_sessions():

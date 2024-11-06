@@ -213,7 +213,7 @@ function displayChatHistory() {
                                 <span class="material-symbols-outlined">chat</span>
                             </button>
                             <button type="button" class="action-button" onclick="deleteSession('${session.date}')">
-                                <span class="material-symbols-observed">delete</span>
+                                <span class="material-symbols-outlined">delete</span>
                             </button>
                         </td>
                     `;
@@ -367,6 +367,7 @@ function summarizeVideo(youtubeUrl) {
         sessionStorage.setItem('youtubeLink', youtubeUrl);
         // Redirect to chat interface after successful processing
         window.location.href = '/chatAI';
+        saveCurrentChatSession();
     })
     .catch(error => {
         showError(error.message || 'An error occurred. Please try again.');
