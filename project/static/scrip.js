@@ -649,6 +649,37 @@ function initializeChatAI() {
     });
 }
 
+document.getElementById('edit-nickname-form').addEventListener('submit', async function(event) {
+    event.preventDefault();  // Prevent form submission from refreshing the page
+
+    const newNickname = document.getElementById('new-nickname').value;
+    
+    try {
+        const response = await fetch('/update_nickname', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ nickname: newNickname })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            // Update the displayed nickname on the site
+            document.getElementById('displayed-nickname').textContent = newNickname;
+            alert('Nickname updated successfully.');
+            document.getElementById('edit-nickname-modal').style.display = 'none'; // Close the modal
+        } else {
+            alert(result.error || 'Error updating nickname');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred while updating the nickname.');
+    }
+});
+
+
 // Initialize the page based on the current view
 window.onload = function() {
     initializeChatAI();

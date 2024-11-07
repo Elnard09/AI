@@ -318,45 +318,41 @@ def logout():
     flash("You have been logged out.", "success")
     return redirect(url_for('login'))
 
+# Route to update nickname
 @app.route('/update_nickname', methods=['POST'])
 @login_required
 def update_nickname():
     data = request.get_json()
-    new_nickname = data.get('nickname', nickname=current_user.nickname, email=current_user.email)
+    new_nickname = data.get('nickname')
 
-    # Validate input
     if not new_nickname:
-        return jsonify({'error': 'New nickname is required.'}), 400
+        return jsonify({'error': 'Nickname cannot be empty.'}), 400
 
-    # Update the user's nickname
+    # Update nickname in the database
     current_user.nickname = new_nickname
     db.session.commit()
-
     return jsonify({'message': 'Nickname updated successfully.'})
 
-
+# Route to update password
 @app.route('/update_password', methods=['POST'])
 @login_required
 def update_password():
     data = request.get_json()
     current_password = data.get('current_password')
     new_password = data.get('new_password')
-    confirm_new_password = data.get('confirm_new_password')
 
-    # Validate inputs
-    if not current_password or not new_password or not confirm_new_password:
-        return jsonify({'error': 'All password fields are required.'}), 400
-    if new_password != confirm_new_password:
-        return jsonify({'error': 'New passwords do not match.'}), 400
+    # Check if the current password is correct
     if not check_password_hash(current_user.password, current_password):
         return jsonify({'error': 'Current password is incorrect.'}), 400
 
-    # Update the password
-    current_user.password = generate_password_hash(new_password, method='pbkdf2:sha256')
+    # Check if new password is provided and valid
+    if not new_password or len(new_password) < 6:
+        return jsonify({'error': 'New password must be at least 6 characters long.'}), 400
+
+    # Update password
+    current_user.password = generate_password_hash(new_password)
     db.session.commit()
-
     return jsonify({'message': 'Password updated successfully.'})
-
 @app.route('/save-chat-session', methods=['POST'])
 def save_chat_session():
     data = request.get_json()
@@ -391,13 +387,22 @@ def get_chat_sessions():
 
 @app.route('/delete-chat-session/<date>', methods=['DELETE'])
 def delete_chat_session(date):
-    session = ChatSession.query.filter_by(date=date).first()
-    if session:
-        db.session.delete(session)
-        db.session.commit()
-        return jsonify({'success': True})
-    else:
-        return jsonify({'error': 'Session not found'}), 404
+    try:
+        # Parse the date from the URL back into a datetime object
+        date_obj = datetime.strptime(date, '%Y-%m-%d %H:%M:%S')
+        
+        # Query the session based on the parsed date object
+        chat_session = ChatSession.query.filter_by(date=date_obj).first()
+        
+        if chat_session:
+            db.session.delete(chat_session)
+            db.session.commit()
+            return jsonify({'success': True})
+        else:
+            return jsonify({'error': 'Session not found'}), 404
+    except ValueError:
+        # Handle incorrect date format in the URL
+        return jsonify({'error': 'Invalid date format'}), 400
 
 @app.route('/get-chat-session/<date>', methods=['GET'])
 def get_chat_session(date):

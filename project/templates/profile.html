@@ -86,5 +86,41 @@
         </main>
     </div>
     <script src="{{ url_for('static', filename='scrip.js') }}"></script>
+
+    <script>
+        const modal = document.getElementById("nickname-modal");
+        const openModalButton = document.getElementById("open-modal-button");
+        const closeModalButton = document.getElementById("close-modal");
+
+        // Open the modal
+        openModalButton.onclick = function() {
+            modal.style.display = "flex";
+        }
+
+        // Close the modal when clicking the close button
+        closeModalButton.onclick = function() {
+            modal.style.display = "none";
+        }
+
+        // Close the modal when clicking outside of it
+        window.onclick = function(event) {
+            if (event.target === modal) {
+                modal.style.display = "none";
+            }
+        }
+
+        // Form submission handler
+        document.getElementById("nickname-form").onsubmit = function(event) {
+            event.preventDefault();
+            const newNickname = document.getElementById("new-nickname").value;
+            console.log("New Nickname:", newNickname);
+
+            // Add code here to send the new nickname to the server using an API call (e.g., fetch POST request)
+
+            // Close the modal after submission
+            modal.style.display = "none";
+        }
+    </script>
+
 </body>
 </html>
