@@ -353,6 +353,7 @@ def update_password():
     current_user.password = generate_password_hash(new_password)
     db.session.commit()
     return jsonify({'message': 'Password updated successfully.'})
+
 @app.route('/save-chat-session', methods=['POST'])
 def save_chat_session():
     data = request.get_json()

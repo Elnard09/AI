@@ -6,6 +6,8 @@ document.addEventListener("DOMContentLoaded", function() {
     initializeFlashMessages();
     initializeSidebarFunctionality();
     initializeNavigationListeners();
+    initializeNicknameUpdate();
+    initializePasswordUpdate();
 });
 
 // Modal functionality
@@ -14,13 +16,11 @@ function initializeModalFunctionality() {
     const nicknameButton = document.getElementById('edit-nickname-button');
     const nicknameModal = document.getElementById('edit-nickname-modal');
     const closeNicknameModalButton = document.getElementById('close-nickname-modal');
-    const nicknameForm = document.getElementById('edit-nickname-form');
 
     // Password modal elements
     const passwordButton = document.getElementById('edit-password-button');
     const passwordModal = document.getElementById('edit-password-modal');
     const closePasswordModalButton = document.getElementById('close-password-modal');
-    const passwordForm = document.getElementById('edit-password-form');
 
     // Nickname Modal Events
     if (nicknameButton && nicknameModal && closeNicknameModalButton) {
@@ -36,13 +36,6 @@ function initializeModalFunctionality() {
             if (event.target === nicknameModal) {
                 nicknameModal.style.display = 'none';
             }
-        });
-
-        nicknameForm.addEventListener('submit', function(event) {
-            event.preventDefault();
-            const nickname = document.getElementById('nickname').value;
-            console.log(`Nickname: ${nickname}`);
-            nicknameModal.style.display = 'none';
         });
     }
 
@@ -60,14 +53,6 @@ function initializeModalFunctionality() {
             if (event.target === passwordModal) {
                 passwordModal.style.display = 'none';
             }
-        });
-
-        passwordForm.addEventListener('submit', function(event) {
-            event.preventDefault();
-            const password = document.getElementById('password').value;
-            const verifyPassword = document.getElementById('verify-password').value;
-            console.log(`Password: ${password}, Verify Password: ${verifyPassword}`);
-            passwordModal.style.display = 'none';
         });
     }
 }
@@ -135,6 +120,180 @@ function initializeNavigationListeners() {
         userProfile.addEventListener('click', () => window.location.href = '/profile');
     }
 }
+
+// Function to handle nickname update
+function initializeNicknameUpdate() {
+    const nicknameForm = document.getElementById('edit-nickname-form');
+
+    if (nicknameForm) {
+        nicknameForm.addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const newNickname = document.getElementById('new-nickname').value;
+
+            try {
+                const response = await fetch('/update_nickname', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ nickname: newNickname })
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.message) {
+                        // Nickname updated successfully
+                        document.getElementById('USERTITLE').textContent = newNickname;
+                        showSuccessPopup('Nickname updated successfully!'); // Pass custom message to showSuccessPopup
+                        document.getElementById('edit-nickname-modal').style.display = 'none'; // Close the modal
+                    } else {
+                        throw new Error(result.error || 'An error occurred while updating the nickname.');
+                    }
+                } else {
+                    throw new Error(`Network response was not ok (${response.status})`);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert(error.message);
+            }
+        });
+    }
+}
+
+// Function to show a success popup with a custom message
+function showSuccessPopup(message) {
+    // Create popup elements
+    const popup = document.createElement('div');
+    popup.id = 'success-popup';
+    popup.style.position = 'fixed';
+    popup.style.top = '50%';
+    popup.style.left = '50%';
+    popup.style.transform = 'translate(-50%, -50%)';
+    popup.style.padding = '20px';
+    popup.style.backgroundColor = 'rgba(0, 128, 0, 0.9)';
+    popup.style.color = 'white';
+    popup.style.borderRadius = '5px';
+    popup.style.boxShadow = '0 0 10px rgba(0, 0, 0, 0.5)';
+    popup.style.zIndex = '1000';
+    popup.style.textAlign = 'center';
+
+    const messageElement = document.createElement('p');
+    messageElement.textContent = message; // Set custom message text
+
+    const confirmButton = document.createElement('button');
+    confirmButton.textContent = 'Confirm';
+    confirmButton.style.marginTop = '10px';
+    confirmButton.style.padding = '5px 10px';
+    confirmButton.style.border = 'none';
+    confirmButton.style.backgroundColor = 'white';
+    confirmButton.style.color = 'rgba(0, 128, 0, 0.9)';
+    confirmButton.style.borderRadius = '3px';
+    confirmButton.style.cursor = 'pointer';
+
+    // Append message and button to popup
+    popup.appendChild(messageElement);
+    popup.appendChild(confirmButton);
+    document.body.appendChild(popup);
+
+    // Event listener for "Confirm" button to remove the popup
+    confirmButton.addEventListener('click', () => {
+        popup.remove(); // Remove popup
+        window.location.reload(); // Refresh the page
+    });
+}
+
+// Function to handle password update
+function initializePasswordUpdate() {
+    const passwordForm = document.getElementById('edit-password-form');
+
+    if (passwordForm) {
+        passwordForm.addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const currentPassword = document.getElementById('current-password').value;
+            const newPassword = document.getElementById('new-password').value;
+            const verifyPassword = document.getElementById('verify-password').value;
+
+            // Client-side validation: Check if new password matches verification password
+            if (newPassword !== verifyPassword) {
+                showErrorPopup('Passwords do not match. Please try again.');
+                return; // Stop the form submission
+            }
+
+            try {
+                const response = await fetch('/update_password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        current_password: currentPassword,
+                        new_password: newPassword
+                    })
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.message) {
+                        // Password updated successfully
+                        showSuccessPopup('Password updated successfully!');
+                        document.getElementById('edit-password-modal').style.display = 'none'; // Close the modal
+                    } else {
+                        // Server-side error (e.g., incorrect current password)
+                        showErrorPopup(result.error || 'An error occurred while updating the password.');
+                    }
+                } else {
+                    const errorData = await response.json();
+                    showErrorPopup(errorData.error || 'An error occurred while updating the password.');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showErrorPopup(error.message);
+            }
+        });
+    }
+}
+
+// Function to show an error popup with a custom message
+function showErrorPopup(message) {
+    // Create popup elements
+    const popup = document.createElement('div');
+    popup.id = 'error-popup';
+    popup.style.position = 'fixed';
+    popup.style.top = '50%';
+    popup.style.left = '50%';
+    popup.style.transform = 'translate(-50%, -50%)';
+    popup.style.padding = '20px';
+    popup.style.backgroundColor = 'rgba(255, 0, 0, 0.9)'; // Red color for error
+    popup.style.color = 'white';
+    popup.style.borderRadius = '5px';
+    popup.style.boxShadow = '0 0 10px rgba(0, 0, 0, 0.5)';
+    popup.style.zIndex = '1000';
+    popup.style.textAlign = 'center';
+
+    const messageElement = document.createElement('p');
+    messageElement.textContent = message;
+
+    const confirmButton = document.createElement('button');
+    confirmButton.textContent = 'OK';
+    confirmButton.style.marginTop = '10px';
+    confirmButton.style.padding = '5px 10px';
+    confirmButton.style.border = 'none';
+    confirmButton.style.backgroundColor = 'white';
+    confirmButton.style.color = 'rgba(255, 0, 0, 0.9)';
+    confirmButton.style.borderRadius = '3px';
+    confirmButton.style.cursor = 'pointer';
+
+    // Append message and button to popup
+    popup.appendChild(messageElement);
+    popup.appendChild(confirmButton);
+    document.body.appendChild(popup);
+
+    // Event listener for "OK" button to remove the popup
+    confirmButton.addEventListener('click', () => {
+        popup.remove(); // Remove popup
+    });
+}
+
 
 // Function to validate YouTube URL
 function isValidYoutubeUrl(url) {
@@ -648,36 +807,6 @@ function initializeChatAI() {
         }
     });
 }
-
-document.getElementById('edit-nickname-form').addEventListener('submit', async function(event) {
-    event.preventDefault();  // Prevent form submission from refreshing the page
-
-    const newNickname = document.getElementById('new-nickname').value;
-    
-    try {
-        const response = await fetch('/update_nickname', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ nickname: newNickname })
-        });
-
-        const result = await response.json();
-
-        if (response.ok) {
-            // Update the displayed nickname on the site
-            document.getElementById('displayed-nickname').textContent = newNickname;
-            alert('Nickname updated successfully.');
-            document.getElementById('edit-nickname-modal').style.display = 'none'; // Close the modal
-        } else {
-            alert(result.error || 'Error updating nickname');
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        alert('An error occurred while updating the nickname.');
-    }
-});
 
 
 // Initialize the page based on the current view
