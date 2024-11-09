@@ -49,19 +49,38 @@ class User(db.Model, UserMixin):
     nickname = db.Column(db.String(50), nullable=False)
     password = db.Column(db.String(200), nullable=False)
 
+# ChatSession model remains the same, but with a relationship to ChatMessage
 class ChatSession(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     date = db.Column(db.DateTime, nullable=False)
     title = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text, nullable=False)
+    messages = db.relationship('ChatMessage', backref='session', lazy=True)  # Relationship to ChatMessage
 
-    def __repr__(self):
-        return f"ChatSession(id={self.id}, date='{self.date}', title='{self.title}', description='{self.description}')"
+# New ChatMessage model to store each message in a session
+class ChatMessage(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    session_id = db.Column(db.Integer, db.ForeignKey('chat_session.id'), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    is_user = db.Column(db.Boolean, nullable=False)  # True for user message, False for AI response
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
 # Create the database
 with app.app_context():
     db.create_all()
-    
+
+
+def create_chat_session(title, description):
+    chat_session = ChatSession(date=datetime.utcnow(), title=title, description=description)
+    db.session.add(chat_session)
+    db.session.commit()
+    return chat_session.id  # Return the session ID for use in storing messages
+
+def save_message(session_id, message, is_user):
+    chat_message = ChatMessage(session_id=session_id, message=message, is_user=is_user)
+    db.session.add(chat_message)
+    db.session.commit()
+
     
 def extract_video_id(youtube_link):
     # Regular expression to extract the video ID from various YouTube URL formats
@@ -104,8 +123,8 @@ def get_video_data(video_id):
         return video.title, video.description, video.transcript
     return None
 
-# Function to interact with OpenAI
-def get_openai_response(prompt, video_data):
+# Function to interact with OpenAI and get both a response and a session summary
+def get_openai_response(prompt, video_data, generate_summary=False):
     video_title, video_description, video_transcript = video_data
 
     conversation_prompt = (
@@ -115,16 +134,37 @@ def get_openai_response(prompt, video_data):
         f"User: {prompt}\nAI:"
     )
 
+    messages = [
+        {"role": "system", "content": "You are an AI assistant that answers questions based on the video content."},
+        {"role": "user", "content": conversation_prompt}
+    ]
+
     response = openai.ChatCompletion.create(
-        model="gpt-4o",
-        messages=[
-            {"role": "system", "content": "You are an AI assistant that answers questions based on the video content."},
-            {"role": "user", "content": conversation_prompt}
-        ],
+        model="gpt-4",
+        messages=messages,
         temperature=0.7
     )
+
+    ai_response = response['choices'][0]['message']['content']
+
+    # Generate a session title and description if requested
+    if generate_summary:
+        summary_prompt = (
+            "Based on this chat session, provide a brief title and description that summarize the main topics."
+        )
+        messages.append({"role": "user", "content": summary_prompt})
+        
+        summary_response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=messages,
+            temperature=0.7
+        )
+
+        title, description = summary_response['choices'][0]['message']['content'].split('\n', 1)
+        return ai_response, title.strip(), description.strip()
     
-    return response['choices'][0]['message']['content']
+    return ai_response
+
 
 # Function to retrieve a user by ID
 def get_user_by_id(user_id):
@@ -172,29 +212,37 @@ def process_youtube_link():
 @app.route('/ask_question', methods=['POST'])
 def ask_question():
     try:
-        # Retrieve the JSON payload
         data = request.get_json()
-
-        # Extract YouTube URL and question from the JSON payload
         youtube_link = data.get('youtube_url')
         question = data.get('question')
 
         if not youtube_link or not question:
             return jsonify({'error': 'YouTube URL or question not provided.'}), 400
 
-        # Extract video ID from the YouTube URL
         video_id = extract_video_id(youtube_link)
 
         if not video_id:
             return jsonify({'error': 'Invalid YouTube URL provided.'}), 400
 
-        # Fetch the video data from the database
         video_data = get_video_data(video_id)
         if video_data:
             if video_data[2] == "Transcript not available.":
                 return jsonify({'error': 'Transcript is not available for this video.'}), 400
-            ai_response = get_openai_response(question, video_data)
-            return jsonify({'response': ai_response})
+            
+            # Get both AI response and a summary (title and description) for the session
+            ai_response, session_title, session_description = get_openai_response(question, video_data, generate_summary=True)
+            
+            # Save session title and description to the database
+            date_now = datetime.now()
+            chat_session = ChatSession(
+                date=date_now,
+                title=session_title,
+                description=session_description
+            )
+            db.session.add(chat_session)
+            db.session.commit()
+            
+            return jsonify({'response': ai_response, 'session_title': session_title, 'session_description': session_description})
         else:
             return jsonify({'error': 'Video not found.'}), 404
     except Exception as e:
@@ -416,6 +464,20 @@ def get_chat_session(date):
         })
     else:
         return jsonify({'error': 'Session not found'}), 404
+    
+@app.route('/chat-session/<int:session_id>', methods=['GET'])
+def get_chat_session_with_messages(session_id):
+    session = ChatSession.query.get_or_404(session_id)
+    messages = ChatMessage.query.filter_by(session_id=session_id).order_by(ChatMessage.timestamp).all()
+    return jsonify({
+        'title': session.title,
+        'description': session.description,
+        'messages': [
+            {'message': msg.message, 'is_user': msg.is_user, 'timestamp': msg.timestamp.strftime('%Y-%m-%d %H:%M:%S')}
+            for msg in messages
+        ]
+    })
+
 
 
 if __name__ == '__main__':
