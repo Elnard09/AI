@@ -61,6 +61,40 @@
         </main>
     </div>
 
-    <script src="{{ url_for('static', filename='scrip.js') }}"></script>
+    <!-- Assuming this section displays the AI response -->
+<div id="ai-response">{{ ai_response }}</div>
+
+<!-- Add the button for Text-to-Speech -->
+<button onclick="speakText()" id="tts-button">Read Out Loud</button>
+
+    <script src="{{ url_for('static', filename='scrip.js') }}">
+
+        function speakText() {
+            const responseText = document.getElementById("ai-response").textContent;
+        
+            // Ensure there's text to read
+            if (responseText.trim() === "") {
+                alert("No text to read.");
+                return;
+            }
+        
+            // Check if the browser supports TTS
+            if ('speechSynthesis' in window) {
+                // Cancel any ongoing speech synthesis to avoid overlapping
+                if (window.speechSynthesis.speaking) {
+                    window.speechSynthesis.cancel();
+                }
+        
+                // Create a new utterance and speak it
+                const speech = new SpeechSynthesisUtterance(responseText);
+                speech.lang = 'en-US';  // Set language to English; adjust as needed
+                speech.rate = 1;  // Set rate of speech; 1 is normal speed
+        
+                window.speechSynthesis.speak(speech);
+            } else {
+                alert("Text-to-speech is not supported in this browser.");
+            }
+        }
+    </script>
 </body>
 </html>
