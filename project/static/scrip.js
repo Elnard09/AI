@@ -17,6 +17,11 @@ function initializePage() {
     const currentPath = window.location.pathname;
     const submitBtn = document.getElementById('submit-chat-ai-button');
     const userInput = document.getElementById('user-chat-ai-input');
+    const sidebar = document.getElementById('sidebar');
+
+    if (sidebar) {
+        initializeSidebarFunctionality();
+    }
 
     if (submitBtn && userInput) {
         submitBtn.addEventListener('click', function() {
@@ -32,13 +37,11 @@ function initializePage() {
                     return;
                 }
                 summarizeVideo(inputText);
-                saveCurrentChatSession();
             } else if (currentPath.includes('/chatAI')) {
                 if (inputText) {
                     sessionStorage.setItem('initialMessage', inputText);
                     sessionStorage.setItem('sourcePage', currentPath);
                     window.location.href = "/chatAI";
-                    saveCurrentChatSession();
                 }
             }
         });
@@ -52,9 +55,6 @@ function initializePage() {
 
     if (currentPath.includes('/chatAI')) {
         initializeChatAI();
-        saveCurrentChatSession();
-    } else if (currentPath.includes('/history')) {
-        displayChatHistory();
     }
 }
 
@@ -399,6 +399,36 @@ function smartFormatResponse(text, isUserMessage = false) {
 
     return formattedText;
 }
+
+// Speech-to-Text functionality
+function startSpeechRecognition() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+        alert("Speech recognition is not supported in your browser.");
+        return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "en-US";
+    recognition.interimResults = false;
+
+    recognition.start();
+
+    recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        document.getElementById("chat-input").value = transcript;
+    };
+
+    recognition.onerror = (event) => {
+        console.error("Speech recognition error:", event.error);
+    };
+
+    recognition.onend = () => {
+        console.log("Speech recognition ended.");
+    };
+}
+
 
 // ===============================
 // User Profile Functions

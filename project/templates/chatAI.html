@@ -6,11 +6,10 @@
     <title>AI Dashboard</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='chatAI.css') }}">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
-
 </head>
 <body>
     <div class="container">
-        <!-- Sidebar code here -->
+        <!-- Sidebar -->
         <aside class="sidebar" id="sidebar">
             <button id="toggle-btn" class="toggle-btn">☰</button>
             <div class="sidebar-content">
@@ -36,24 +35,21 @@
                 <div class="profile-section" id="user-profile">
                     <img src="{{ url_for('static', filename='image/img_avatar.png') }}" alt="avatar icon" class="avatar">
                     <div class="profile-title">
-                        <p id="USERTITLE">{{ nickname }}</p> <!-- Dynamic Nickname -->
+                        <p id="USERTITLE">{{ nickname }}</p>
                         <p id="USEREMAIL">{{ email }}</p>
                     </div>
                 </div>
             </div>
-        </aside>    
-        <!-- Main content for Main -->    
+        </aside>
+
+        <!-- Main Content -->
         <main class="main-content" id="main-content" role="main">
-            <!-- Chat window that will be shown when the user starts a conversation -->
             <div class="chat-window" id="chat-window" style="display:none;">
-                <!-- Messages will appear here -->
-                <!-- Initial message after video data is saved -->
                 <div class="chat-message bot">
                     <p class="ai-message">Video data saved! You can now ask questions.</p>
                 </div>
             </div>
 
-            <!-- Chat input area within the chat window -->
             <div class="chat-input-section" id="chat-input-section" style="display:none;">
                 <input type="text" id="chat-input" placeholder="Ask a question..." />
                 <button id="mic-button" onclick="startSpeechRecognition()">🎤</button>
@@ -62,44 +58,6 @@
         </main>
     </div>
 
-    <!-- Assuming this section displays the AI response -->
-<div id="ai-response">{{ ai_response }}</div>
-
-<script>
-    // Speech-to-Text functionality
-    function startSpeechRecognition() {
-        // Check if the browser supports SpeechRecognition
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-        if (!SpeechRecognition) {
-            alert("Speech recognition is not supported in your browser.");
-            return;
-        }
-
-        const recognition = new SpeechRecognition();
-        recognition.lang = "en-US"; // Set language for recognition
-        recognition.interimResults = false; // Only final results
-
-        // Start recognition
-        recognition.start();
-
-        // Handle result
-        recognition.onresult = (event) => {
-            const transcript = event.results[0][0].transcript;
-            document.getElementById("chat-input").value = transcript;
-        };
-
-        // Handle errors
-        recognition.onerror = (event) => {
-            console.error("Speech recognition error:", event.error);
-        };
-
-        // Stop recognition when finished
-        recognition.onend = () => {
-            console.log("Speech recognition ended.");
-        };
-    }
-</script>
-
+    <script src="{{ url_for('static', filename='scrip.js') }}"></script>
 </body>
 </html>
