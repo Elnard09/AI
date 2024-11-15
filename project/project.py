@@ -3,7 +3,7 @@ from flask_login import login_required, LoginManager, UserMixin, logout_user, cu
 from googleapiclient.discovery import build
 from youtube_transcript_api import YouTubeTranscriptApi
 import openai
-import pyttsx3
+import asyncio
 from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
 import os
@@ -16,10 +16,10 @@ from datetime import datetime
 
 load_dotenv()
 
-engine = pyttsx3.init()
+# engine = pyttsx3.init()
 
-engine.setProperty('rate', 150)
-engine.setProperty('volume', 1)
+# engine.setProperty('rate', 150)
+# engine.setProperty('volume', 1)
 
 # Initialize Flask and the database
 app = Flask(__name__)
@@ -73,9 +73,10 @@ class ChatMessage(db.Model):
 with app.app_context():
     db.create_all()
     
-def speak_text(text):
-    engine.say(text)
-    engine.runAndWait()
+# def speak_text(text):
+#     engine.say(text)
+#     engine.runAndWait()
+
     
 
 
@@ -251,8 +252,6 @@ def ask_question():
             db.session.add(chat_session)
             db.session.commit()
             
-            # Use TTS to read the AI response
-            speak_text(ai_response)
 
             return jsonify({'response': ai_response, 'session_title': session_title, 'session_description': session_description})
         else:
