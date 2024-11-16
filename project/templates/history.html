@@ -90,6 +90,12 @@
                                 <td>${session.description}</td>
                                 <td>
                                     <button onclick="viewSession(${session.id})">View</button>
+                                    <button type="button" class="action-button" onclick="reinteractSession('${session.id}')">
+                                        <span class="material-symbols-outlined">chat</span>
+                                    </button>
+                                    <button type="button" class="action-button" onclick="deleteSession('${session.date}')">
+                                        <span class="material-symbols-outlined">delete</span>
+                                    </button>
                                 </td>
                             `;
     

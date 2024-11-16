@@ -19,7 +19,7 @@ function initializePage() {
     const userInput = document.getElementById('user-chat-ai-input');
     const sidebar = document.getElementById('sidebar');
 
-    if (sidebar) {
+    if (!sidebar) {
         initializeSidebarFunctionality();
     }
 
@@ -409,26 +409,93 @@ function startSpeechRecognition() {
         return;
     }
 
+    let currentTranscript = ""; // Holds the cumulative transcript
+    let interimTranscript = ""; // Holds the current interim transcript
+    let isPaused = false; // Tracks whether recognition is paused
+
     const recognition = new SpeechRecognition();
     recognition.lang = "en-US";
-    recognition.interimResults = false;
+    recognition.interimResults = true;
 
+    // Get references to UI elements
+    const speechPopup = document.getElementById("speech-popup");
+    const speechTranscript = document.getElementById("speech-transcript");
+    const speechStatus = document.getElementById("speech-status");
+    const pausePlayButton = document.getElementById("pause-play-button");
+
+    // Initialize popup
+    speechTranscript.innerHTML = ""; // Clear previous transcript
+    speechStatus.textContent = "Listening..."; // Set initial status
+    speechPopup.style.display = "block";
+    pausePlayButton.style.display = "none"; // Hide Pause/Play initially
     recognition.start();
 
     recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        document.getElementById("chat-input").value = transcript;
+        interimTranscript = ""; // Reset interim transcript
+        for (let i = 0; i < event.results.length; i++) {
+            if (event.results[i].isFinal) {
+                currentTranscript += event.results[i][0].transcript + " "; // Add final results
+            } else {
+                interimTranscript += event.results[i][0].transcript; // Update interim results
+            }
+        }
+
+        // Update the display with current transcript and interim text
+        speechTranscript.textContent = currentTranscript + interimTranscript;
+        pausePlayButton.style.display = "inline"; // Show Pause/Play button
     };
 
     recognition.onerror = (event) => {
         console.error("Speech recognition error:", event.error);
+        speechStatus.textContent = `Error: ${event.error}`; // Update status dynamically
+        closeSpeechPopup();
     };
 
     recognition.onend = () => {
-        console.log("Speech recognition ended.");
+        if (!isPaused) {
+            speechStatus.textContent = "Speech recognition ended."; // Update status
+            pausePlayButton.textContent = "Play"; // Change to "Play" after speech ends
+            isPaused = true; // Treat as paused after ending
+        }
     };
+
+    // Attach event listeners
+    pausePlayButton.onclick = () => togglePausePlay();
+    document.querySelector(".popup-buttons button:nth-child(1)").onclick = () => clearTranscript();
+    document.querySelector(".popup-buttons button:nth-child(3)").onclick = () => submitTranscript();
+
+    function togglePausePlay() {
+        if (isPaused) {
+            // Resume listening and continue appending results
+            recognition.start();
+            speechStatus.textContent = "Listening...";
+            pausePlayButton.textContent = "Pause";
+            isPaused = false;
+        } else {
+            // Pause listening
+            recognition.stop();
+            speechStatus.textContent = "Paused";
+            pausePlayButton.textContent = "Play";
+            isPaused = true;
+        }
+    }
+
+    function clearTranscript() {
+        currentTranscript = ""; // Clear the cumulative transcript
+        speechTranscript.textContent = ""; // Clear displayed text
+    }
+
+    function submitTranscript() {
+        const chatInput = document.getElementById("chat-input");
+        chatInput.value = currentTranscript.trim(); // Set the chat input value
+        closeSpeechPopup(); // Close the popup
+    }
 }
 
+function closeSpeechPopup() {
+    const speechPopup = document.getElementById("speech-popup");
+    speechPopup.style.display = "none";
+}
 
 // ===============================
 // User Profile Functions

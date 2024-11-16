@@ -52,8 +52,25 @@
 
             <div class="chat-input-section" id="chat-input-section" style="display:none;">
                 <input type="text" id="chat-input" placeholder="Ask a question..." />
-                <button id="mic-button" onclick="startSpeechRecognition()">🎤</button>
+                <button id="mic-button" onclick="startSpeechRecognition()"><span class="material-symbols-outlined">mic</span></button>
                 <button class="submit-btn" id="chat-submit-btn">Send</button>
+            </div>
+
+            <!-- Popup for Speech Recognition -->
+
+            
+            <!-- Popup for Speech Recognition -->
+            <div id="speech-popup" class="speech-popup" style="display: none;">
+                <div class="speech-popup-content">
+                    <span class="close-popup" onclick="closeSpeechPopup()">×</span>
+                    <p id="speech-status">Listening...</p>
+                    <div id="speech-transcript" class="speech-transcript"></div>
+                    <div class="popup-buttons">
+                        <button onclick="clearTranscript()">Clear</button>
+                        <button id="pause-play-button" onclick="toggleRecognition()">Pause</button>
+                        <button onclick="submitTranscript()">Submit</button>
+                    </div>
+                </div>
             </div>
         </main>
     </div>

@@ -137,8 +137,8 @@ nav ul li:hover {
     border-radius: 5px;
 }
 
-.material-symbols-outlined {
-    margin-right: 8px;
+nav .material-symbols-outlined {
+    margin-right: 8px; /* Keep margin for <nav> icons */
 }
 
 nav ul li span.material-symbols-outlined{
@@ -247,6 +247,33 @@ input[type="text"] {
     cursor: pointer;
 }
 
+/* Style for the mic button */
+#mic-button {
+    display: flex;
+    align-items: center; /* Vertically center the icon */
+    justify-content: center; /* Horizontally center the icon */
+    background-color: #4CAF50; /* Optional: Button background */
+    color: white; /* Icon color */
+    border: none;
+    border-radius: 5px; /* Rounded corners */
+    padding: 0; /* Reset padding to avoid misalignment */
+    cursor: pointer;
+    width: 40px; /* Button width */
+    height: 39px; /* Button height */
+    box-sizing: border-box; /* Ensure consistent sizing */
+}
+
+#mic-button .material-symbols-outlined {
+    margin-right: 0; /* Remove margin for the mic button icon */
+}
+
+/* Style for the mic icon inside the button */
+#mic-button .material-symbols-outlined {
+    font-size: 20px; /* Icon size */
+    line-height: 0; /* Ensures no extra space above or below */
+    vertical-align: middle; /* Align icon properly */
+}
+
 .tabs {
     display: flex;
     margin-bottom: 20px;
@@ -283,101 +310,6 @@ input[type="text"] {
 }
 
 /* chat with AI */
-
-/* .chat-window {
-    background-color: #fff;
-    border-radius: 10px;
-    padding: 20px;
-    height: 400px;
-    overflow-y: auto;
-    margin-top: 20px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-}
-
-.message {
-    margin: 10px 0;
-    padding: 10px;
-    border-radius: 10px;
-    max-width: 80%;
-}
-
-.user-message {
-    background-color: #d1e7dd;
-    align-self: flex-end;
-    text-align: right;
-}
-
-.ai-message {
-    background-color: #f1f1f1;
-    align-self: flex-start;
-    text-align: left;
-}
-
-input-section {
-    display: flex;
-    margin-top: 20px;
-}
-
-input[type="text"] {
-    flex: 1;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    margin-right: 10px;
-}
-
-.submit-btn {
-    background-color: #6d28d9;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    padding: 10px 20px;
-    cursor: pointer;
-} */
-
-
-/*  */
-/* Hide initial content and show chat window */
-/* .main-content {
-    width: 100%;
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    transition: all 0.3s ease;
-}
-
-.chat-window {
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    background-color: #fff;
-    border-radius: 10px;
-    padding: 20px;
-    height: 100%;
-    overflow-y: auto;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-}
-
-.message {
-    margin: 10px 0;
-    padding: 10px;
-    border-radius: 10px;
-    max-width: 80%;
-}
-
-.user-message {
-    background-color: #d1e7dd;
-    align-self: flex-end;
-    text-align: right;
-}
-
-.ai-message {
-    background-color: #f1f1f1;
-    align-self: flex-start;
-    text-align: left;
-} */
-
-
 /* Chat window and message styles */
 .chat-window {
     display: flex;
@@ -420,30 +352,6 @@ input[type="text"] {
 }
 
 /* Chat input section styles */
-
-
-/* input[type="text"] {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    margin-right: 10px;
-}
-
-.submit-btn {
-    background-color: #6d28d9;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    padding: 10px 20px;
-    cursor: pointer;
-}
- */
-
-
-
-
-
 .chat-input-section {
     display: flex;
     margin: 0px 0;
@@ -451,18 +359,6 @@ input[type="text"] {
     padding: 10px;
     justify-content: space-between;
 }
-
-/* .chat-input-section {
-    display: flex;
-    margin: 20px 0;
-    justify-content: space-between;
-    padding: 10px;
-    background-color: #f9f9f9;
-    border-top: 1px solid #ccc;
-    position: fixed;
-    bottom: 0;
-    width: 90%;
-} */
 
 .chat-input-section input {
     width: 90%;
@@ -479,8 +375,85 @@ input[type="text"] {
     border: none;
     border-radius: 5px;
     cursor: pointer;
+    margin-left: 5px;
 }
 
 .chat-input-section button:hover {
     background-color: #45a049;
+}
+
+
+
+
+/* Speech Popup Styling */
+.speech-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+    z-index: 1000;
+    width: 300px;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.2);
+}
+
+.speech-popup-content {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
+}
+
+/* Close button in the top-left corner */
+.close-popup {
+    align-self: flex-start;
+    cursor: pointer;
+    font-size: 20px;
+    color: #ccc;
+}
+
+/* Transcription display */
+.speech-transcript {
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 5px;
+    padding: 10px;
+    font-size: 14px;
+    height: 100px;
+    overflow-y: auto;
+    word-wrap: break-word;
+    text-align: left;
+}
+
+/* Adjust button alignment */
+.popup-buttons {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.popup-buttons button {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    background-color: #4CAF50;
+    color: white;
+    cursor: pointer;
+}
+
+.popup-buttons button:nth-child(1) {
+    background-color: #f44336; /* Red for "Clear" */
+}
+
+.popup-buttons button:nth-child(2) {
+    background-color: #2196F3; /* Blue for "Pause/Play" */
+}
+
+.popup-buttons button:hover {
+    opacity: 0.8;
 }
