@@ -59,7 +59,7 @@ class ChatSession(db.Model):
     date = db.Column(db.DateTime, nullable=False)
     title = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text, nullable=False)
-    messages = db.relationship('ChatMessage', backref='session', lazy=True)  # Relationship to ChatMessage
+
 
 # New ChatMessage model to store each message in a session
 class ChatMessage(db.Model):
@@ -488,6 +488,22 @@ def get_chat_session_with_messages(session_id):
             for msg in messages
         ]
     })
+    
+@app.route('/get-chat-history', methods=['GET'])
+@login_required
+def get_chat_history():
+    sessions = ChatSession.query.order_by(ChatSession.date.desc()).all()  # Fetch all chat sessions
+    session_data = [
+        {
+            'id': session.id,
+            'title': session.title,
+            'description': session.description,
+            'date': session.date.strftime('%Y-%m-%d %H:%M:%S')
+        }
+        for session in sessions
+    ]
+    return jsonify(session_data)
+
 
 
 
