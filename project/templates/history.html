@@ -90,7 +90,8 @@
                                 <td>${session.description}</td>
                                 <td>
                                     <button onclick="viewSession(${session.id})">View</button>
-                                    <button type="button" class="action-button" onclick="reinteractSession('${session.id}')">
+
+                                     <button type="button" class="action-button" onclick="reinteractSession('${session.id}')">
                                         <span class="material-symbols-outlined">chat</span>
                                     </button>
                                     <button type="button" class="action-button" onclick="deleteSession('${session.date}')">
@@ -116,7 +117,6 @@
             // Redirect to a session view page or load session dynamically
             window.location.href = `/chat-session/${sessionId}`;
         }
-    </script>
-    
+    </script>    
 </body>
 </html>

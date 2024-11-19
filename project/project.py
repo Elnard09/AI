@@ -56,6 +56,7 @@ class User(db.Model, UserMixin):
 # ChatSession model remains the same, but with a relationship to ChatMessage
 class ChatSession(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    session_id = db.Column(db.Integer, db.ForeignKey('chat_message.id'), nullable=False)
     date = db.Column(db.DateTime, nullable=False)
     title = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text, nullable=False)
@@ -73,9 +74,6 @@ class ChatMessage(db.Model):
 with app.app_context():
     db.create_all()
     
-# def speak_text(text):
-#     engine.say(text)
-#     engine.runAndWait()
 
     
 
@@ -414,6 +412,7 @@ def update_password():
     return jsonify({'message': 'Password updated successfully.'})
 
 @app.route('/save-chat-session', methods=['POST'])
+@login_required
 def save_chat_session():
     data = request.get_json()
     date_str = data['date']
@@ -424,14 +423,14 @@ def save_chat_session():
     try:
         date_obj = datetime.strptime(date_str, '%m/%d/%Y, %I:%M:%S %p')
     except ValueError as e:
-        return {"error": f"Invalid date format: {e}"}, 400
+        return jsonify({"error": f"Invalid date format: {e}"}), 400
 
-    # Use date_obj instead of date_str when creating the ChatSession
-    session = ChatSession(date=date_obj, title=title, description=description)
+    # Ensure the current user's ID is saved in the ChatSession
+    session = ChatSession(date=date_obj, title=title, description=description, user_id=current_user.id)
     db.session.add(session)
     db.session.commit()
-    
-    return {"success": True}
+
+    return jsonify({"success": True})
 
 
 @app.route('/chat-sessions', methods=['GET'])
@@ -504,6 +503,25 @@ def get_chat_history():
     ]
     return jsonify(session_data)
 
+@app.route('/chat-session/view/<int:session_id>', methods=['GET'])
+@login_required
+def view_chat_session(session_id):
+    session = ChatSession.query.get_or_404(session_id)
+    messages = ChatMessage.query.filter_by(session_id=session_id).order_by(ChatMessage.timestamp).all()
+
+    return render_template(
+        'view_chat.html',
+        title=session.title,
+        description=session.description,
+        messages=[
+            {
+                'message': msg.message,
+                'is_user': msg.is_user,
+                'timestamp': msg.timestamp.strftime('%Y-%m-%d %H:%M:%S')
+            }
+            for msg in messages
+        ]
+    )
 
 
 
