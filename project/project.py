@@ -40,6 +40,7 @@ login_manager.login_message_category = 'info'  # Optional: Sets flash message ca
 
 
 # Model to store video information
+# Updated YouTubeVideo model (optional; no foreign keys required for this example)
 class YouTubeVideo(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     video_id = db.Column(db.String(100), unique=True, nullable=False)
@@ -47,25 +48,28 @@ class YouTubeVideo(db.Model):
     description = db.Column(db.Text, nullable=False)
     transcript = db.Column(db.Text, nullable=False)
 
+# User model with no changes
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
     nickname = db.Column(db.String(50), nullable=False)
     password = db.Column(db.String(200), nullable=False)
+    # Adding relationship to ChatSession
+    chat_sessions = db.relationship('ChatSession', backref='user', lazy=True)
 
-# ChatSession model remains the same, but with a relationship to ChatMessage
+# ChatSession now references User and has a relationship with ChatMessage
 class ChatSession(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    session_id = db.Column(db.Integer, db.ForeignKey('chat_message.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # Foreign key to User table
     date = db.Column(db.DateTime, nullable=False)
     title = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text, nullable=False)
 
 
-# New ChatMessage model to store each message in a session
+# ChatMessage references ChatSession via foreign key
 class ChatMessage(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    session_id = db.Column(db.Integer, db.ForeignKey('chat_session.id'), nullable=False)
+    session_id = db.Column(db.Integer, db.ForeignKey('chat_session.id'), nullable=False)  # Reference to ChatSession
     message = db.Column(db.Text, nullable=False)
     is_user = db.Column(db.Boolean, nullable=False)  # True for user message, False for AI response
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
@@ -73,21 +77,30 @@ class ChatMessage(db.Model):
 # Create the database
 with app.app_context():
     db.create_all()
-    
-
-    
 
 
-def create_chat_session(title, description):
-    chat_session = ChatSession(date=datetime.utcnow(), title=title, description=description)
+def create_chat_session(user_id, title, description):
+    chat_session = ChatSession(
+        user_id=user_id,  # Associate the session with the user
+        date=datetime.utcnow(),
+        title=title,
+        description=description
+    )
     db.session.add(chat_session)
     db.session.commit()
-    return chat_session.id  # Return the session ID for use in storing messages
+    return chat_session.id
+
+
 
 def save_message(session_id, message, is_user):
-    chat_message = ChatMessage(session_id=session_id, message=message, is_user=is_user)
+    chat_message = ChatMessage(
+        session_id=session_id,
+        message=message,
+        is_user=is_user
+    )
     db.session.add(chat_message)
     db.session.commit()
+
 
     
 def extract_video_id(youtube_link):
@@ -218,6 +231,7 @@ def process_youtube_link():
 
 
 @app.route('/ask_question', methods=['POST'])
+@login_required
 def ask_question():
     try:
         data = request.get_json()
@@ -238,20 +252,22 @@ def ask_question():
                 return jsonify({'error': 'Transcript is not available for this video.'}), 400
 
             # Get both AI response and a summary (title and description) for the session
-            ai_response, session_title, session_description = get_openai_response(question, video_data, generate_summary=True)
-            
+            ai_response, session_title, session_description = get_openai_response(
+                question, video_data, generate_summary=True
+            )
+
             # Save session title and description to the database
-            date_now = datetime.now()
-            chat_session = ChatSession(
-                date=date_now,
+            chat_session_id = create_chat_session(
+                user_id=current_user.id,  # Associate session with logged-in user
                 title=session_title,
                 description=session_description
             )
-            db.session.add(chat_session)
-            db.session.commit()
-            
 
-            return jsonify({'response': ai_response, 'session_title': session_title, 'session_description': session_description})
+            return jsonify({
+                'response': ai_response,
+                'session_title': session_title,
+                'session_description': session_description
+            })
         else:
             return jsonify({'error': 'Video not found.'}), 404
     except Exception as e:
