@@ -63,60 +63,6 @@
         </div>
     </div>
 
-    <script src="{{ url_for('static', filename='scrip.js') }}"></script>
-    <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            const historyList = document.getElementById("chat-history");
-            const noDataMessage = document.getElementById("no-data-message");
-    
-            // Fetch chat history from the backend
-            fetch('/get-chat-history')
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error("Failed to fetch chat history.");
-                    }
-                    return response.json();
-                })
-                .then(chatHistory => {
-                    if (chatHistory.length > 0) {
-                        noDataMessage.style.display = "none";
-    
-                        chatHistory.forEach(session => {
-                            const row = document.createElement("tr");
-    
-                            row.innerHTML = `
-                                <td>${session.date}</td>
-                                <td>${session.title}</td>
-                                <td>${session.description}</td>
-                                <td>
-                                    <button onclick="viewSession(${session.id})">View</button>
-
-                                     <button type="button" class="action-button" onclick="reinteractSession('${session.id}')">
-                                        <span class="material-symbols-outlined">chat</span>
-                                    </button>
-                                    <button type="button" class="action-button" onclick="deleteSession('${session.date}')">
-                                        <span class="material-symbols-outlined">delete</span>
-                                    </button>
-                                </td>
-                            `;
-    
-                            historyList.appendChild(row);
-                        });
-                    } else {
-                        noDataMessage.style.display = "block";
-                    }
-                })
-                .catch(error => {
-                    console.error("Error fetching chat history:", error);
-                    noDataMessage.style.display = "block";
-                    noDataMessage.textContent = "Error loading chat history.";
-                });
-        });
-    
-        function viewSession(sessionId) {
-            // Redirect to a session view page or load session dynamically
-            window.location.href = `/chat-session/${sessionId}`;
-        }
-    </script>    
+    <script src="{{ url_for('static', filename='scrip.js') }}"></script> 
 </body>
 </html>

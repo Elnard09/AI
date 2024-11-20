@@ -154,31 +154,57 @@ function initializeChatAI() {
     const chatInputSection = document.getElementById('chat-input-section');
     const submitBtn = document.getElementById('chat-submit-btn');
     const inputField = document.getElementById('chat-input');
+    const youtubeLink = sessionStorage.getItem('youtubeLink'); // For new session
+    const sessionId = sessionStorage.getItem('currentSessionId'); // For existing session
 
     chatWindow.style.display = 'block';
     chatInputSection.style.display = 'flex';
 
-    submitBtn.addEventListener('click', function() {
+    if (youtubeLink) {
+        // Always display the "ask questions" message when a new link is summarized
+        displayAIResponse('You can now ask questions based on the summarized video.');
+        sessionStorage.removeItem('youtubeLink'); // Clear after displaying to avoid duplicates
+    }
+
+    if (sessionId) {
+        // Load previous messages for an existing session
+        fetch(`/chat-session/${sessionId}`)
+            .then(response => response.json())
+            .then(session => {
+                if (session.messages && session.messages.length > 0) {
+                    session.messages.forEach(message => {
+                        if (message.is_user) {
+                            displayUserMessage(message.message);
+                        } else {
+                            displayAIResponse(message.message);
+                        }
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error loading session messages:', error);
+                showError('Failed to load session messages. Please try again.');
+            });
+    }
+
+    // Handle user input and query submission
+    submitBtn.addEventListener('click', () => {
         const question = inputField.value.trim();
         if (!question) return;
 
-        const youtubeLink = sessionStorage.getItem('youtubeLink');
-        if (!youtubeLink) {
-            showError('No YouTube link found.');
-            return;
-        }
-
         displayUserMessage(question);
-        askQuestion(question, youtubeLink);
         inputField.value = '';
+
+        // Use askQuestion function for handling the request
+        askQuestion(question, youtubeLink, sessionId);
     });
 
-    inputField.addEventListener('keypress', function(e) {
+    inputField.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') submitBtn.click();
     });
 }
 
-function askQuestion(question, youtubeUrl) {
+function askQuestion(question, youtubeUrl, sessionId = null) {
     const submitBtn = document.getElementById('chat-submit-btn');
     const loadingDiv = document.createElement('div');
     loadingDiv.id = 'loading-message';
@@ -204,6 +230,7 @@ function askQuestion(question, youtubeUrl) {
         body: JSON.stringify({
             youtube_url: youtubeUrl,
             question: question,
+            session_id: sessionId,
         }),
     })
     .then(response => response.json())
@@ -211,14 +238,21 @@ function askQuestion(question, youtubeUrl) {
         if (data.error) {
             throw new Error(data.error);
         }
+
+        // Update session ID for new sessions
+        if (!sessionId && data.session_id) {
+            sessionStorage.setItem('currentSessionId', data.session_id);
+        }
+
         displayAIResponse(data.response);
     })
     .catch(error => {
+        console.error('Error:', error);
         showError(error.message || 'An error occurred. Please try again.');
     })
     .finally(() => {
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Ask';
+        submitBtn.textContent = 'Send';
         if (document.getElementById('loading-message')) {
             document.getElementById('loading-message').remove();
         }
@@ -642,58 +676,54 @@ function saveCurrentChatSession() {
 }
 
 function displayChatHistory() {
-    const chatHistoryContainer = document.getElementById('chat-history');
-    const noDataMessage = document.getElementById('no-data-message');
+    const historyList = document.getElementById("chat-history");
+    const noDataMessage = document.getElementById("no-data-message");
 
-    fetch('/chat-sessions')
+    fetch('/get-chat-history')
         .then(response => response.json())
-        .then(sessions => {
-            if (sessions.length === 0) {
-                noDataMessage.style.display = 'block';
-            } else {
-                noDataMessage.style.display = 'none';
-                sessions.forEach(session => {
-                    const row = document.createElement('tr');
+        .then(chatHistory => {
+            if (chatHistory.length > 0) {
+                noDataMessage.style.display = "none";
+
+                chatHistory.forEach(session => {
+                    const row = document.createElement("tr");
+
                     row.innerHTML = `
                         <td>${session.date}</td>
                         <td>${session.title}</td>
                         <td>${session.description}</td>
                         <td>
-                            <button type="button" class="action-button" onclick="reinteractSession('${session.date}')">
+                            <button type="button" class="action-button" onclick="reinteractSession('${session.id}')">
                                 <span class="material-symbols-outlined">chat</span>
                             </button>
-                            <button type="button" class="action-button" onclick="deleteSession('${session.date}')">
+                            <button type="button" class="action-button" onclick="deleteSession('${session.id}')">
                                 <span class="material-symbols-outlined">delete</span>
                             </button>
                         </td>
                     `;
-                    chatHistoryContainer.appendChild(row);
+
+                    historyList.appendChild(row);
                 });
+            } else {
+                noDataMessage.style.display = "block";
             }
         })
         .catch(error => {
-            console.error('Error fetching chat history:', error);
-            noDataMessage.style.display = 'block';
+            console.error("Error fetching chat history:", error);
+            noDataMessage.style.display = "block";
         });
 }
+document.addEventListener("DOMContentLoaded", displayChatHistory);
 
-function reinteractSession(date) {
-    fetch(`/get-chat-session/${date}`)
-    .then(response => response.json())
-    .then(session => {
-        if (session) {
-            // Redirect to chatAI.html with session data, e.g., using URL parameters
-            sessionStorage.setItem('currentSession', JSON.stringify(session));
-            window.location.href = '/chatAI';
-        }
-    })
-    .catch(error => {
-        console.error('Error fetching session:', error);
-    });
+function reinteractSession(sessionId) {
+    sessionStorage.setItem('currentSessionId', sessionId);
+    sessionStorage.removeItem('youtubeLink'); // Clear any previous link
+    window.location.href = '/chatAI';
 }
 
-function deleteSession(date) {
-    fetch(`/delete-chat-session/${date}`, {
+
+function deleteSession(sessionId) {
+    fetch(`/delete-chat-session/${sessionId}`, {
         method: 'DELETE',
     })
     .then(response => response.json())
@@ -705,9 +735,7 @@ function deleteSession(date) {
             console.error('Error deleting session:', data.error);
         }
     })
-    .catch(error => {
-        console.error('Error deleting session:', error);
-    });
+    .catch(error => console.error('Error deleting session:', error));
 }
 
 // ===============================

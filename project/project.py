@@ -186,6 +186,11 @@ def get_openai_response(prompt, video_data, generate_summary=False):
     
     return ai_response
 
+def get_dynamic_title_and_description(question, ai_response):
+    # Combine question and response to create a summary
+    title = question if len(question) < 50 else question[:47] + "..."
+    description = ai_response if len(ai_response) < 150 else ai_response[:147] + "..."
+    return title, description
 
 # Function to retrieve a user by ID
 def get_user_by_id(user_id):
@@ -194,6 +199,9 @@ def get_user_by_id(user_id):
 @app.route('/process_youtube_link', methods=['POST'])
 def process_youtube_link():
     try:
+        # Clear the current session ID when a new link is processed
+        session.pop('current_session_id', None)
+
         data = request.get_json()
         youtube_link = data['youtube_url']
         video_id = extract_video_id(youtube_link)
@@ -229,7 +237,6 @@ def process_youtube_link():
         logging.error(f"Error processing YouTube link: {e}")
         return jsonify({'error': str(e)}), 400
 
-
 @app.route('/ask_question', methods=['POST'])
 @login_required
 def ask_question():
@@ -237,45 +244,48 @@ def ask_question():
         data = request.get_json()
         youtube_link = data.get('youtube_url')
         question = data.get('question')
+        session_id = data.get('session_id')  # Get session ID if provided
 
         if not youtube_link or not question:
             return jsonify({'error': 'YouTube URL or question not provided.'}), 400
 
         video_id = extract_video_id(youtube_link)
-
         if not video_id:
             return jsonify({'error': 'Invalid YouTube URL provided.'}), 400
 
         video_data = get_video_data(video_id)
         if video_data:
-            if video_data[2] == "Transcript not available.":
-                return jsonify({'error': 'Transcript is not available for this video.'}), 400
+            if not session_id:
+                # Create a new session only if no session_id exists
+                session_id = create_chat_session(
+                    user_id=current_user.id,
+                    title="Chat with AI",
+                    description="Conversation based on the summarized video."
+                )
 
-            # Get both AI response and a summary (title and description) for the session
-            ai_response, session_title, session_description = get_openai_response(
-                question, video_data, generate_summary=True
-            )
+            # Save user question
+            save_message(session_id, question, is_user=True)
 
-            # Save session title and description to the database
-            chat_session_id = create_chat_session(
-                user_id=current_user.id,  # Associate session with logged-in user
-                title=session_title,
-                description=session_description
-            )
+            # Generate AI response
+            ai_response = get_openai_response(question, video_data)
 
-            return jsonify({
-                'response': ai_response,
-                'session_title': session_title,
-                'session_description': session_description
-            })
+            # Save AI response
+            save_message(session_id, ai_response, is_user=False)
+
+            # Dynamically generate and update title and description
+            title, description = get_dynamic_title_and_description(question, ai_response)
+            session = ChatSession.query.get(session_id)
+            session.title = title
+            session.description = description
+            db.session.commit()
+
+            return jsonify({'response': ai_response, 'session_id': session_id})
         else:
             return jsonify({'error': 'Video not found.'}), 404
     except Exception as e:
         logging.error(f"Error asking question: {e}")
         return jsonify({'error': str(e)}), 400
 
-
-    
 # Main route to render the interface
 @app.route('/')
 def home():
@@ -460,14 +470,11 @@ def get_chat_sessions():
         } for session in sessions
     ])
 
-@app.route('/delete-chat-session/<date>', methods=['DELETE'])
-def delete_chat_session(date):
+@app.route('/delete-chat-session/<int:session_id>', methods=['DELETE'])
+def delete_chat_session(session_id):
     try:
-        # Parse the date from the URL back into a datetime object
-        date_obj = datetime.strptime(date, '%Y-%m-%d %H:%M:%S')
-        
-        # Query the session based on the parsed date object
-        chat_session = ChatSession.query.filter_by(date=date_obj).first()
+        # Query the session based on the session_id
+        chat_session = ChatSession.query.get(session_id)
         
         if chat_session:
             db.session.delete(chat_session)
@@ -475,22 +482,28 @@ def delete_chat_session(date):
             return jsonify({'success': True})
         else:
             return jsonify({'error': 'Session not found'}), 404
-    except ValueError:
-        # Handle incorrect date format in the URL
-        return jsonify({'error': 'Invalid date format'}), 400
+    except Exception as e:
+        logging.error(f"Error deleting session: {e}")
+        return jsonify({'error': 'An error occurred while deleting the session.'}), 500
 
-@app.route('/get-chat-session/<date>', methods=['GET'])
-def get_chat_session(date):
-    session = ChatSession.query.filter_by(date=date).first()
-    if session:
+@app.route('/chat-session/<int:session_id>', methods=['GET'])
+def get_chat_session(session_id):
+    try:
+        session = ChatSession.query.get_or_404(session_id)
+        messages = ChatMessage.query.filter_by(session_id=session_id).order_by(ChatMessage.timestamp).all()
         return jsonify({
-            'date': session.date.strftime('%Y-%m-%d %H:%M:%S'),
+            'id': session.id,
             'title': session.title,
-            'description': session.description
+            'description': session.description,
+            'messages': [
+                {'message': msg.message, 'is_user': msg.is_user, 'timestamp': msg.timestamp.strftime('%Y-%m-%d %H:%M:%S')}
+                for msg in messages
+            ]
         })
-    else:
-        return jsonify({'error': 'Session not found'}), 404
-    
+    except Exception as e:
+        logging.error(f"Error fetching session: {e}")
+        return jsonify({'error': 'Failed to retrieve session messages.'}), 500
+
 @app.route('/chat-session/<int:session_id>', methods=['GET'])
 def get_chat_session_with_messages(session_id):
     session = ChatSession.query.get_or_404(session_id)
