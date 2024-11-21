@@ -4,6 +4,7 @@ from googleapiclient.discovery import build
 from youtube_transcript_api import YouTubeTranscriptApi
 import openai
 import asyncio
+import pyttsx3
 from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
 import os
@@ -16,11 +17,11 @@ from datetime import datetime
 
 load_dotenv()
 
-# engine = pyttsx3.init()
+engine = pyttsx3.init()
 
-# engine.setProperty('rate', 150)
-# engine.setProperty('volume', 1)
-
+engine.setProperty('rate', 150)
+engine.setProperty('volume', 1)
+AUDIO_FILE_PATH = 'static/audio_output.mp3'
 # Initialize Flask and the database
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///youtube_videos.db'
@@ -196,6 +197,26 @@ def get_dynamic_title_and_description(question, ai_response):
 def get_user_by_id(user_id):
     return User.query.get(user_id)
 
+def text_to_speech(text):
+    engine.save_to_file(text, AUDIO_FILE_PATH)
+    engine.runAndWait()
+    
+@app.route('/text-to-speech', methods=['POST'])
+@login_required
+def text_to_speech_route():
+    data = request.get_json()
+    text = data.get('text')
+    
+    if not text:
+        return jsonify({'error': 'Text is required.'}), 400
+    
+    # Convert the text to speech and save the audio file
+    text_to_speech(text)
+    
+    # Return the path of the saved audio file
+    return jsonify({'audio_file': AUDIO_FILE_PATH})
+
+
 @app.route('/process_youtube_link', methods=['POST'])
 def process_youtube_link():
     try:
@@ -272,6 +293,9 @@ def ask_question():
             # Save AI response
             save_message(session_id, ai_response, is_user=False)
 
+            # Trigger TTS to read the AI response aloud
+            text_to_speech(ai_response)
+
             # Dynamically generate and update title and description
             title, description = get_dynamic_title_and_description(question, ai_response)
             session = ChatSession.query.get(session_id)
@@ -279,7 +303,7 @@ def ask_question():
             session.description = description
             db.session.commit()
 
-            return jsonify({'response': ai_response, 'session_id': session_id})
+            return jsonify({'response': ai_response, 'session_id': session_id, 'audio_file': AUDIO_FILE_PATH})
         else:
             return jsonify({'error': 'Video not found.'}), 404
     except Exception as e:
