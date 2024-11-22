@@ -129,6 +129,10 @@ function initializeSidebarFunctionality() {
 
 function initializeNavigationListeners() {
     const navigations = {
+        'new-chat-for-logo': '/main',
+        'new-chat-page': '/main',
+        'tab-summarizer': '/summarizer',
+        'tab-history': '/history',
         'nav-summarizer': '/summarizer',
         'summarizer-btn': '/summarizer',
         'nav-files': '/files',

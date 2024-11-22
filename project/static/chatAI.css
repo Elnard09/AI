@@ -58,6 +58,41 @@ body {
     display: none;
 }
 
+.sidebar.collapsed .new-chat-btn .text {
+    display: none;
+}
+
+.sidebar.collapsed .new-chat-btn .material-symbols-outlined {
+    font-size: 24px;
+    margin-right: 0;
+}
+
+.sidebar.collapsed .new-chat-btn {
+    justify-content: center;
+    margin-top: 5px;
+    margin-left: -15px;
+    padding: 8px 19px;
+}
+
+.new-chat-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: white;
+    color: black;
+    padding: 10px;
+    border: 1px solid;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    cursor: pointer;
+}
+
+.new-chat-btn:hover {
+    background-color: #6d28d9;
+    color: white;
+    border-radius: 5px;
+}
+
 .sidebar.collapsed .material-symbols-outlined {
     font-size: 24px;
     margin-right: 0;

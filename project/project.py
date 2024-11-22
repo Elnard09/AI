@@ -327,7 +327,7 @@ def login():
         if user and check_password_hash(user.password, password):
             login_user(user)
             flash("Logged in successfully!", "success")
-            return redirect(url_for('summarizer'))
+            return redirect(url_for('main'))
         else:
             flash("Invalid email or password.", "error")
     
@@ -376,6 +376,11 @@ def signup():
 @app.route('/forgotpassword')
 def forgotpassword():
     return render_template('forgotpassword.html')
+
+@app.route('/main')
+@login_required
+def main():
+    return render_template('main.html', nickname=current_user.nickname, email=current_user.email)
 
 @app.route('/chatAI')
 @login_required

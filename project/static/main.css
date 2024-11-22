@@ -14,7 +14,8 @@ body {
     height: 100vh;
     transition: all 0.3s ease;
 }
-/* <!-- Sidebar code here --> */
+
+/* Sidebar */
 .sidebar {
     width: 20%;
     background-color: #fff;
@@ -53,15 +54,7 @@ body {
     right: 5px;
 }
 
-.sidebar.collapsed nav ul li .text {
-    display: none;
-}
-
-.sidebar.collapsed .material-symbols-outlined {
-    font-size: 24px;
-    margin-right: 0;
-}
-
+.sidebar.collapsed nav ul li .text,
 .sidebar.collapsed .new-chat-btn .text {
     display: none;
 }
@@ -71,35 +64,16 @@ body {
     margin-right: 0;
 }
 
-.sidebar.collapsed .new-chat-btn {
-    justify-content: center;
-    margin-top: 5px;
-    margin-left: -15px;
-    padding: 8px 19px;
-}
-
-.new-chat-btn {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background-color: white;
-    color: black;
-    padding: 10px;
-    border: 1px solid;
-    border-radius: 5px;
-    margin-bottom: 20px;
-    cursor: pointer;
-}
-
-.new-chat-btn:hover {
-    background-color: #6d28d9;
-    color: white;
-    border-radius: 5px;
-}
-
 .sidebar.collapsed nav ul li {
     justify-content: center;
     padding: 10px 0;
+}
+
+.sidebar.collapsed .new-chat-btn {
+    justify-content: center;
+    margin-top: 45px;
+    margin-left: -15px;
+    padding: 8px 19px;
 }
 
 .sidebar-content {
@@ -110,7 +84,6 @@ body {
 .sidebar.collapsed .sidebar-content {
     opacity: 1;
     pointer-events: all;
-    margin-top: 27px;
 }
 
 .logo {
@@ -129,25 +102,31 @@ body {
     width: 40px;
 }
 
+.new-chat-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: white;
+    color: black;
+    padding: 10px;
+    border: 1px solid;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    cursor: pointer;
+}
+
+.new-chat-btn:hover {
+    background-color: #f5f5f5;
+    color: black;
+    border-radius: 5px;
+}
+
 .onboarding {
     margin-bottom: 20px;
 }
 
 .sidebar.collapsed .onboarding {
     display: none;
-}
-
-.progress-bar {
-    background-color: #e0e0e0;
-    height: 8px;
-    border-radius: 5px;
-    margin-top: 5px;
-}
-
-.progress {
-    background-color: #6d28d9;
-    height: 100%;
-    border-radius: 5px;
 }
 
 nav ul {
@@ -175,7 +154,7 @@ nav ul li:hover {
     margin-right: 8px;
 }
 
-nav ul li span.material-symbols-outlined{
+nav ul li span.material-symbols-outlined {
     font-size: 24px;
 }
 
@@ -242,107 +221,99 @@ nav ul li span.material-symbols-outlined{
     color: #808080;
 }
 
-
-
-/* <!-- Main content for the Page --> */
-/* Main content for the Page */
+/* Main Content */
 .main-content {
+    margin-top: 10%;
     width: 80%;
     padding: 40px;
-    background-color: #f8f8f8;
+    /* border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); */
     transition: width 0.3s ease;
 }
 
 .container .sidebar.collapsed + .main-content {
-    width: 100%;
+    margin: 10% auto; /* Center horizontally */
+    margin-left: 18%; /* Adjust this value for better alignment */
+    width: 85%; /* Maintain overall layout width */
+    max-width: 800px; /* Prevent sections from growing too wide */
+    transition: width 0.3s ease; /* Smooth transition */
 }
 
-/* Table Styles */
-.table-responsive {
+
+/* Welcome Section */
+.welcome-header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.welcome-header h1 {
+    font-size: 28px;
+    color: #4a4a4a;
+}
+
+.welcome-header p {
+    font-size: 16px;
+    color: #757575;
+    margin-top: 10px;
+}
+
+/* Input Section */
+.input-section {
+    display: flex;
+    margin: 20px 0;
+    gap: 10px;
+}
+
+.input-section input {
+    flex: 1;
+    padding: 12px 15px;
     border: 1px solid #ddd;
     border-radius: 8px;
-    margin-top: 20px;
-    background-color: #fff;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.3s;
 }
 
-.table {
-    width: 100%;
-    border-collapse: collapse;
-    table-layout: fixed; /* Ensures columns have the same width across thead and tbody */
-    background-color: #fff;
+.input-section input:focus {
+    border-color: #6d28d9;
+    box-shadow: 0 0 5px rgba(109, 40, 217, 0.2);
 }
 
-.table th, .table td {
-    padding: 12px 15px;
-    text-align: left;
-    border-bottom: 1px solid #ddd;
-}
-
-.table th {
+.input-section .submit-btn {
     background-color: #6d28d9;
     color: white;
-    font-weight: bold;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 20px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s;
 }
 
-/* Ensure column widths are the same across thead and tbody */
-.table th:nth-child(1),
-.table td:nth-child(1) {
-    width: 25%; /* Adjust the width as needed for the first column */
+.input-section .submit-btn:hover {
+    background-color: #5b22b7;
 }
 
-.table th:nth-child(2),
-.table td:nth-child(2) {
-    width: 20%; /* Adjust the width as needed for the second column */
+/* Tabs Section */
+.tabs {
+    display: flex;
+    justify-content: center;
+    margin: 20px 0;
+    gap: 10px;
 }
 
-.table th:nth-child(3),
-.table td:nth-child(3) {
-    width: 40%; /* Adjust the width as needed for the third column */
-}
-
-.table th:nth-child(4),
-.table td:nth-child(4) {
-    width: 15%; /* Adjust the width as needed for the fourth column */
-}
-
-/* Make tbody scrollable */
-tbody#chat-history {
-    display: block;
-    max-height: 470px; /* Adjust as needed */
-    overflow-y: auto;
-    width: 100%;
-}
-
-/* Ensure columns align in both thead and tbody */
-thead, tbody#chat-history tr {
-    display: table;
-    width: 100%;
-    table-layout: auto; /* Ensures columns align across header and body */
-}
-
-/* Styling for table cells within tbody */
-tbody#chat-history td {
-    padding: 10px;
-    border-bottom: 1px solid #ddd;
-}
-
-.action-button {
-    background: none;
+.tab {
+    padding: 12px 20px;
+    background-color: #e0e0e0;
+    color: #333;
+    border-radius: 5px;
     border: none;
     cursor: pointer;
-    color: #6d28d9;
-    margin-right: 10px;
-    transition: color 0.3s;
+    font-size: 14px;
+    transition: background-color 0.3s, color 0.3s;
 }
 
-.action-button:hover {
-    color: #d9534f; /* Color change on hover for delete button */
-}
-
-/* No Data Message */
-.no-data {
-    text-align: center;
-    font-size: 18px;
-    color: #888;
-    margin-top: 20px;
+.tab:hover{
+    background-color: #6d28d9;
+    color: white;
 }
