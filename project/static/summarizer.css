@@ -265,26 +265,32 @@ nav ul li span.material-symbols-outlined{
 }
 
 /* for Youtube Video Summarizer */
-.class-list {
+.class-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 20px;
     margin-top: 20px;
-    width: 50%; 
+}
+
+.class-list {
     padding: 30px 45px;
     border: 2px dashed #6c63ff;
     background: transparent;
     color: #6c63ff;
     font-size: 16px;
     border-radius: 4px;
-    /* cursor: pointer; */
     transition: background 0.3s, color 0.3s;
     box-sizing: border-box;
 }
 
 .class-info {
     display: flex;
-    padding-bottom: 5px;
+    align-items: center; /* Align elements vertically */
 }
 
 .content-text{
+    padding-top: 8px;
+    margin-bottom: -8px;
     text-align: center;
 }
 
@@ -315,4 +321,31 @@ input[type="text"] {
     border-radius: 5px;
     padding: 10px 20px;
     cursor: pointer;
+}
+
+/* Specific styles for YouTube input */
+.youtube-input {
+    gap: 0; /* No additional spacing */
+}
+
+/* Specific styles for File Upload input */
+.file-upload {
+    gap: 10px; /* Add spacing between file input and submit button */
+}
+
+#user-chat-ai-input {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+    width: 100%;
+}
+
+#user-chat-ai-input-file {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+    cursor: pointer;
+    flex-grow: 1; /* Allows the file input to take available space */
 }

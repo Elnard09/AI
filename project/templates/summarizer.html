@@ -42,15 +42,28 @@
                 <h1><span class="material-symbols-outlined">cycle</span>Summarizer Page</h1>
                 <p>This is the content for the summarizer feature.</p>
             </header>
-            <div class="class-list">
-                <div class="class-info">
-                    <img src="{{ url_for('static', filename='image/youtube-img.png') }}" alt="Youtube image icon" id="IMGYOUTUBEICON">
-                    <input type="text"  id="user-chat-ai-input" placeholder="Enter Youtube Video Link...">
-                    <button class="submit-btn" id="submit-chat-ai-button">➔</button>
+            <div class="class-grid">
+                <div class="class-list">
+                    <div class="class-info youtube-input">
+                        <img src="{{ url_for('static', filename='image/youtube-img.png') }}" alt="Youtube image icon" id="IMGYOUTUBEICON">
+                        <input type="text" id="user-chat-ai-input" placeholder="Enter Youtube Video Link...">
+                        <button class="submit-btn" id="submit-chat-ai-button">➔</button>
+                    </div>
+                    <div>
+                        <p class="content-text">Quickly paste a YouTube link to extract the video, and start asking questions about it.</p>
+                    </div>
                 </div>
-                <div>
-                    <p class="content-text">Easily copy the entire caption of a youtube video in one click, search the transcript, and jump to the exact point in the video.</p>
-                </div>
+                
+                <div class="class-list">
+                    <div class="class-info file-upload">
+                        <img src="{{ url_for('static', filename='image/document.jpg') }}" alt="File image icon" id="IMGYOUTUBEICON">
+                        <input type="file" id="user-chat-ai-input-file">
+                        <button class="submit-btn" id="submit-chat-ai-button-file">➔</button>
+                    </div>
+                    <div>
+                        <p class="content-text">Upload your documents to receive detailed questions or uncover key insights.</p>
+                    </div>
+                </div>     
             </div>
         </main>
     </div>
