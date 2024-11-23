@@ -12,16 +12,18 @@ import re
 import logging 
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
-
+from werkzeug.utils import secure_filename
 
 
 load_dotenv()
 
 engine = pyttsx3.init()
-
 engine.setProperty('rate', 150)
 engine.setProperty('volume', 1)
 AUDIO_FILE_PATH = 'static/audio_output.mp3'
+
+
+
 # Initialize Flask and the database
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///youtube_videos.db'
@@ -39,6 +41,11 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'
 login_manager.login_message_category = 'info'  # Optional: Sets flash message category
 
+# Configuration for file uploads
+UPLOAD_FOLDER = 'uploads'
+ALLOWED_EXTENSIONS = {'txt', 'pdf', 'docx'}
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # Model to store video information
 # Updated YouTubeVideo model (optional; no foreign keys required for this example)
@@ -91,7 +98,23 @@ def create_chat_session(user_id, title, description):
     db.session.commit()
     return chat_session.id
 
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+def extract_text_from_file(filepath):
+    if filepath.endswith('.txt'):
+        with open(filepath, 'r', encoding='utf-8') as f:
+            return f.read()
+    elif filepath.endswith('.pdf'):
+        from PyPDF2 import PdfReader
+        reader = PdfReader(filepath)
+        return ''.join([page.extract_text() for page in reader.pages])
+    elif filepath.endswith('.docx'):
+        import docx
+        doc = docx.Document(filepath)
+        return '\n'.join([paragraph.text for paragraph in doc.paragraphs])
+    else:
+        return None
 
 def save_message(session_id, message, is_user):
     chat_message = ChatMessage(
@@ -581,7 +604,46 @@ def view_chat_session(session_id):
         ]
     )
 
-
+@app.route('/upload-file', methods=['POST'])
+@login_required
+def upload_file():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part in the request'}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+    
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+        
+        try:
+            # Extract text from the uploaded file
+            text_content = extract_text_from_file(filepath)
+            if not text_content:
+                return jsonify({'error': 'Failed to extract text from the file'}), 400
+            
+            # Generate summary using OpenAI
+            summary_prompt = f"Summarize the following text:\n{text_content}\n\nSummary:"
+            messages = [
+                {"role": "system", "content": "You are an AI assistant that summarizes uploaded documents."},
+                {"role": "user", "content": summary_prompt}
+            ]
+            response = openai.ChatCompletion.create(
+                model="gpt-4",
+                messages=messages,
+                temperature=0.7
+            )
+            summary = response['choices'][0]['message']['content']
+            return jsonify({'summary': summary})
+        
+        except Exception as e:
+            logging.error(f"Error processing file: {e}")
+            return jsonify({'error': 'Failed to process the file.'}), 500
+    else:
+        return jsonify({'error': 'Invalid file type. Allowed types are txt, pdf, docx.'}), 400
 
 if __name__ == '__main__':
     app.run(debug=True)

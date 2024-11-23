@@ -1,0 +1,26 @@
+<form id="file-upload-form" enctype="multipart/form-data">
+    <input type="file" id="file" name="file" accept=".txt, .pdf, .docx" required>
+    <button type="submit">Upload and Summarize</button>
+</form>
+
+<div id="summary-result"></div>
+
+<script>
+    document.getElementById('file-upload-form').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const formData = new FormData();
+        formData.append('file', document.getElementById('file').files[0]);
+        
+        const response = await fetch('/upload-file', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        if (response.ok) {
+            document.getElementById('summary-result').textContent = result.summary;
+        } else {
+            alert(result.error || 'An error occurred.');
+        }
+    });
+</script>
