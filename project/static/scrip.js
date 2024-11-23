@@ -11,6 +11,7 @@ document.addEventListener("DOMContentLoaded", function() {
     initializeNavigationListeners();
     initializeNicknameUpdate();
     initializePasswordUpdate();
+    initializeFileUpload(); 
 });
 
 function initializePage() {
@@ -24,9 +25,9 @@ function initializePage() {
     }
 
     if (submitBtn && userInput) {
-        submitBtn.addEventListener('click', function() {
+        submitBtn.addEventListener('click', function () {
             const inputText = userInput.value.trim();
-            
+
             if (currentPath.includes('/summarizer')) {
                 if (!inputText) {
                     showError('Please enter a YouTube URL');
@@ -46,7 +47,7 @@ function initializePage() {
             }
         });
 
-        userInput.addEventListener('keypress', function(e) {
+        userInput.addEventListener('keypress', function (e) {
             if (e.key === 'Enter') {
                 submitBtn.click();
             }
@@ -54,7 +55,23 @@ function initializePage() {
     }
 
     if (currentPath.includes('/chatAI')) {
-        initializeChatAI();
+        const chatWindow = document.getElementById("chat-window");
+        const fileSummary = sessionStorage.getItem("fileSummary");
+        const aiMessage = sessionStorage.getItem("aiMessage");
+
+        // Display file summary if available
+        if (fileSummary) {
+            displayAIResponse(`Summary of your uploaded document:\n\n${fileSummary}`);
+            sessionStorage.removeItem("fileSummary"); // Clear after use
+        }
+
+        // Display AI message if available
+        if (aiMessage) {
+            displayAIResponse(aiMessage);
+            sessionStorage.removeItem("aiMessage"); // Clear after use
+        }
+
+        initializeChatAI(); // Continue with the chat initialization
     }
 }
 
@@ -533,6 +550,67 @@ function startSpeechRecognition() {
 function closeSpeechPopup() {
     const speechPopup = document.getElementById("speech-popup");
     speechPopup.style.display = "none";
+}
+
+// ===============================
+// File Summarizer Functions
+// ===============================
+
+function initializeFileUpload() {
+    const fileInput = document.getElementById("user-chat-ai-input-file");
+    const fileSubmitBtn = document.getElementById("submit-chat-ai-button-file");
+
+    if (fileSubmitBtn && fileInput) {
+        fileSubmitBtn.addEventListener("click", async () => {
+            const file = fileInput.files[0];
+            if (!file) {
+                showError("Please select a file to upload.");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("file", file);
+
+            // Show loading message
+            const loadingDiv = document.createElement("div");
+            loadingDiv.id = "loading-message";
+            loadingDiv.textContent = "Uploading file and processing summary...";
+            loadingDiv.style.color = "white";
+            loadingDiv.style.backgroundColor = "rgba(0, 0, 0, 0.7)";
+            loadingDiv.style.padding = "20px";
+            loadingDiv.style.position = "fixed";
+            loadingDiv.style.top = "50%";
+            loadingDiv.style.left = "50%";
+            loadingDiv.style.transform = "translate(-50%, -50%)";
+            loadingDiv.style.borderRadius = "5px";
+            document.body.appendChild(loadingDiv);
+
+            try {
+                const response = await fetch("/upload-file", {
+                    method: "POST",
+                    body: formData,
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    // Store AI message for the file
+                    sessionStorage.setItem("aiMessage", "You can now ask questions based on the summarized file.");
+                    // Redirect to chatAI.html
+                    window.location.href = "/chatAI";
+                } else {
+                    throw new Error(data.error || "Failed to process the file.");
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                showError(error.message || "An error occurred. Please try again.");
+            } finally {
+                // Remove loading message
+                if (document.getElementById("loading-message")) {
+                    document.getElementById("loading-message").remove();
+                }
+            }
+        });
+    }
 }
 
 // ===============================

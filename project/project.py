@@ -286,49 +286,57 @@ def process_youtube_link():
 def ask_question():
     try:
         data = request.get_json()
-        youtube_link = data.get('youtube_url')
+        youtube_link = data.get('youtube_url')  # This will be None for file-based questions
         question = data.get('question')
         session_id = data.get('session_id')  # Get session ID if provided
 
-        if not youtube_link or not question:
-            return jsonify({'error': 'YouTube URL or question not provided.'}), 400
+        if not question:
+            return jsonify({'error': 'Question not provided.'}), 400
 
-        video_id = extract_video_id(youtube_link)
-        if not video_id:
-            return jsonify({'error': 'Invalid YouTube URL provided.'}), 400
+        video_data = None
 
-        video_data = get_video_data(video_id)
-        if video_data:
-            if not session_id:
-                # Create a new session only if no session_id exists
-                session_id = create_chat_session(
-                    user_id=current_user.id,
-                    title="Chat with AI",
-                    description="Conversation based on the summarized video."
-                )
-
-            # Save user question
-            save_message(session_id, question, is_user=True)
-
-            # Generate AI response
-            ai_response = get_openai_response(question, video_data)
-
-            # Save AI response
-            save_message(session_id, ai_response, is_user=False)
-
-            # Trigger TTS to read the AI response aloud
-            text_to_speech(ai_response)
-
-            # Dynamically generate and update title and description
-            title, description = get_dynamic_title_and_description(question, ai_response)
-            session = ChatSession.query.get(session_id)
-            session.title = title
-            session.description = description
-            db.session.commit()
-
-            return jsonify({'response': ai_response, 'session_id': session_id, 'audio_file': AUDIO_FILE_PATH})
+        if youtube_link:
+            # Handle YouTube-based questions
+            video_id = extract_video_id(youtube_link)
+            if not video_id:
+                return jsonify({'error': 'Invalid YouTube URL provided.'}), 400
+            video_data = get_video_data(video_id)
         else:
-            return jsonify({'error': 'Video not found.'}), 404
+            # Handle file-based questions
+            file_summary = session.get('fileSummary')  # Use Flask session to store file summary
+            if not file_summary:
+                return jsonify({'error': 'No file summary found. Please upload a file or provide a YouTube link.'}), 400
+            video_data = ("Uploaded File", "File summary", file_summary)
+
+        if not video_data:
+            return jsonify({'error': 'Content not found.'}), 404
+
+        # Create a new session if one does not exist
+        if not session_id:
+            session_id = create_chat_session(
+                user_id=current_user.id,
+                title="Chat with AI",
+                description="Conversation based on the summarized content."
+            )
+
+        # Save the user question
+        save_message(session_id, question, is_user=True)
+
+        # Generate AI response
+        ai_response = get_openai_response(question, video_data)
+
+        # Save the AI response
+        save_message(session_id, ai_response, is_user=False)
+
+        # Dynamically generate and update title and description
+        title, description = get_dynamic_title_and_description(question, ai_response)
+        chat_session = ChatSession.query.get(session_id)
+        chat_session.title = title
+        chat_session.description = description
+        db.session.commit()
+
+        return jsonify({'response': ai_response, 'session_id': session_id})
+
     except Exception as e:
         logging.error(f"Error asking question: {e}")
         return jsonify({'error': str(e)}), 400
@@ -609,22 +617,22 @@ def view_chat_session(session_id):
 def upload_file():
     if 'file' not in request.files:
         return jsonify({'error': 'No file part in the request'}), 400
-    
+
     file = request.files['file']
     if file.filename == '':
         return jsonify({'error': 'No file selected'}), 400
-    
+
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
-        
+
         try:
             # Extract text from the uploaded file
             text_content = extract_text_from_file(filepath)
             if not text_content:
                 return jsonify({'error': 'Failed to extract text from the file'}), 400
-            
+
             # Generate summary using OpenAI
             summary_prompt = f"Summarize the following text:\n{text_content}\n\nSummary:"
             messages = [
@@ -637,8 +645,12 @@ def upload_file():
                 temperature=0.7
             )
             summary = response['choices'][0]['message']['content']
+
+            # Store the summary in the session
+            session['fileSummary'] = summary
+
             return jsonify({'summary': summary})
-        
+
         except Exception as e:
             logging.error(f"Error processing file: {e}")
             return jsonify({'error': 'Failed to process the file.'}), 500
