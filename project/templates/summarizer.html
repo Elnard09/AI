@@ -43,6 +43,7 @@
                 <p>This is the content for the summarizer feature.</p>
             </header>
             <div class="class-grid">
+                <!-- Video Summarizer -->
                 <div class="class-list">
                     <div class="class-info youtube-input">
                         <img src="{{ url_for('static', filename='image/youtube-img.png') }}" alt="Youtube image icon" id="IMGYOUTUBEICON">
@@ -53,7 +54,7 @@
                         <p class="content-text">Quickly paste a YouTube link to extract the video, and start asking questions about it.</p>
                     </div>
                 </div>
-                
+                <!-- File Summarizer -->
                 <div class="class-list">
                     <div class="class-info file-upload">
                         <img src="{{ url_for('static', filename='image/document.jpg') }}" alt="File image icon" id="IMGYOUTUBEICON">
@@ -63,7 +64,18 @@
                     <div>
                         <p class="content-text">Upload your documents to receive detailed questions or uncover key insights.</p>
                     </div>
-                </div>     
+                </div>    
+                <!-- Code Creator -->
+                <div class="class-list">
+                    <div class="class-info file-upload">
+                        <img src="{{ url_for('static', filename='image/code.jpg') }}" alt="File image icon" id="IMGYOUTUBEICON">
+                        <input type="text" id="code-creator-input" placeholder="Ask a coding question (e.g., 'How do I write a Python function?')...">
+                        <button class="submit-btn" id="submit-chat-ai-button-file">➔</button>
+                    </div>
+                    <div>
+                        <p class="content-text">Ask a question to generate or analyze code, and receive expert AI-generated responses.</p>
+                    </div>
+                </div>
             </div>
         </main>
     </div>
