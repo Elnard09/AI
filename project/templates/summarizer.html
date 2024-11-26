@@ -85,43 +85,23 @@
                         <p class="content-text">Ask a question to generate or analyze code, and receive detailed explanations and insights.</p>
                     </div>
                 </div>
+                <!-- Image Analyzer -->
+                <div class="class-list">
+                    <div>
+                        <h3>Image Analyzer</h3>
+                    </div>
+                    <div class="class-info image-upload">
+                        <img src="{{ url_for('static', filename='image/image.jpg') }}" alt="Image Analyzer icon" id="IMGYOUTUBEICON">
+                        <input type="file" id="image-uploader-input" accept="image/*">
+                        <button class="submit-btn" id="submit-chat-ai-button-image">➔</button>
+                    </div>
+                    <div>
+                        <p class="content-text">Upload an image to extract text or analyze its contents for detailed insights.</p>
+                    </div>
+                </div>
             </div>
         </main>
     </div>
     <script src="{{ url_for('static', filename='scrip.js') }}"></script>
-    <script>
-        document.getElementById('summarizeCodeButton').addEventListener('click', async () => {
-            const codeBlock = document.getElementById('codeInput').value;
-    
-            if (!codeBlock.trim()) {
-                alert('Please enter a code block.');
-                return;
-            }
-    
-            try {
-                const response = await fetch('/summarize-code', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ code: codeBlock })
-                });
-    
-                const data = await response.json();
-    
-                if (response.ok) {
-                    const outputDiv = document.getElementById('codeSummaryOutput');
-                    outputDiv.style.display = 'block';
-                    outputDiv.textContent = data.explanation;
-                } else {
-                    alert(data.error || 'Failed to summarize the code.');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('An error occurred while summarizing the code.');
-            }
-        });
-    </script>
-    <!-- <script src="../static/script.js"></script> -->
 </body>
 </html>

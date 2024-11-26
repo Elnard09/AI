@@ -330,7 +330,7 @@ input[type="text"] {
 
 /* Specific styles for File Upload input */
 .file-upload {
-    gap: 10px; /* Add spacing between file input and submit button */
+    gap: 5px; /* Add spacing between file input and submit button */
 }
 
 #user-chat-ai-input {
@@ -342,6 +342,20 @@ input[type="text"] {
 }
 
 #user-chat-ai-input-file {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+    cursor: pointer;
+    flex-grow: 1; /* Allows the file input to take available space */
+}
+
+/* Specific styles for Image Analyzer input */
+.image-upload {
+    gap: 5px; /* Space between elements */
+}
+
+#image-uploader-input {
     padding: 10px;
     border: 1px solid #ddd;
     border-radius: 5px;

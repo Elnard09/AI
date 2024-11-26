@@ -681,7 +681,7 @@ def summarize_code():
         ]
 
         response = openai.ChatCompletion.create(
-            model="gpt-40",
+            model="gpt-4",
             messages=messages,
             temperature=0.7
         )

@@ -13,6 +13,7 @@ document.addEventListener("DOMContentLoaded", function() {
     initializePasswordUpdate();
     initializeFileUpload(); 
     handleCodeAnalyzer();
+    handleImageAnalyzer();
 });
 
 function initializePage() {
@@ -656,6 +657,49 @@ function handleCodeAnalyzer() {
     }
 }
 
+// ===============================
+// Function to Handle Image Analyzer
+// ===============================
+function handleImageAnalyzer() {
+    const imageSubmitBtn = document.getElementById("submit-chat-ai-button-image");
+    const imageInputField = document.getElementById("image-uploader-input");
+
+    if (imageSubmitBtn && imageInputField) {
+        imageSubmitBtn.addEventListener("click", async () => {
+            const imageFile = imageInputField.files[0];
+            if (!imageFile) {
+                alert("Please upload an image file.");
+                return;
+            }
+
+            showLoadingMessage("Analyzing image... Please wait.");
+
+            const formData = new FormData();
+            formData.append("image", imageFile);
+
+            try {
+                const response = await fetch("/analyze-image", {
+                    method: "POST",
+                    body: formData,
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    sessionStorage.setItem("aiMessage", data.analysis);
+                    window.location.href = "/chatAI";
+                } else {
+                    alert(data.error || "Failed to analyze the image.");
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                alert("An error occurred while analyzing the image.");
+            } finally {
+                removeLoadingMessage();
+            }
+        });
+    }
+}
 
 // ===============================
 // User Profile Functions
