@@ -85,6 +85,8 @@ class ChatMessage(db.Model):
 # Create the database
 with app.app_context():
     db.create_all()
+    
+
 
 
 def create_chat_session(user_id, title, description):
@@ -656,6 +658,41 @@ def upload_file():
             return jsonify({'error': 'Failed to process the file.'}), 500
     else:
         return jsonify({'error': 'Invalid file type. Allowed types are txt, pdf, docx.'}), 400
+
+@app.route('/summarize-code', methods=['POST'])
+@login_required
+def summarize_code():
+    try:
+        data = request.get_json()
+        code_block = data.get('code')
+
+        if not code_block:
+            return jsonify({'error': 'Code block is required.'}), 400
+
+        # Generate explanation and summary using OpenAI
+        code_prompt = (
+            "Explain the following block of code in simple terms and summarize its purpose:\n\n"
+            f"{code_block}\n\nExplanation and Summary:"
+        )
+
+        messages = [
+            {"role": "system", "content": "You are an AI assistant that explains code to users in simple terms."},
+            {"role": "user", "content": code_prompt}
+        ]
+
+        response = openai.ChatCompletion.create(
+            model="gpt-40",
+            messages=messages,
+            temperature=0.7
+        )
+
+        explanation = response['choices'][0]['message']['content']
+
+        return jsonify({'explanation': explanation})
+    except Exception as e:
+        logging.error(f"Error summarizing code: {e}")
+        return jsonify({'error': 'Failed to summarize the code.'}), 500
+
 
 if __name__ == '__main__':
     app.run(debug=True)
