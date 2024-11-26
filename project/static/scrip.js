@@ -12,6 +12,7 @@ document.addEventListener("DOMContentLoaded", function() {
     initializeNicknameUpdate();
     initializePasswordUpdate();
     initializeFileUpload(); 
+    handleCodeAnalyzer();
 });
 
 function initializePage() {
@@ -167,7 +168,7 @@ function initializeNavigationListeners() {
 }
 
 // ===============================
-// Chat Functions
+// Chat Functions (Video Summarizer)
 // ===============================
 
 function initializeChatAI() {
@@ -614,6 +615,49 @@ function initializeFileUpload() {
 }
 
 // ===============================
+// Function to Handle Code Analyzer
+// ===============================
+function handleCodeAnalyzer() {
+    const codeSubmitBtn = document.getElementById("submit-chat-ai-button-code");
+    const codeInputField = document.getElementById("code-creator-input");
+
+    if (codeSubmitBtn && codeInputField) {
+        codeSubmitBtn.addEventListener("click", async () => {
+            const codeBlock = codeInputField.value.trim();
+            if (!codeBlock) {
+                alert("Please enter a code block.");
+                return;
+            }
+
+            showLoadingMessage("Analyzing code... Please wait.");
+
+            try {
+                const response = await fetch("/summarize-code", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ code: codeBlock }),
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    sessionStorage.setItem("aiMessage", data.explanation);
+                    window.location.href = "/chatAI";
+                } else {
+                    alert(data.error || "Failed to analyze the code.");
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                alert("An error occurred while analyzing the code.");
+            } finally {
+                removeLoadingMessage();
+            }
+        });
+    }
+}
+
+
+// ===============================
 // User Profile Functions
 // ===============================
 
@@ -938,6 +982,28 @@ function showSuccessPopup(message) {
         popup.remove(); // Remove popup
         window.location.reload(); // Refresh the page
     });
+}
+
+function showLoadingMessage(message) {
+    const loadingDiv = document.createElement("div");
+    loadingDiv.id = "loading-message";
+    loadingDiv.textContent = message;
+    loadingDiv.style.color = "white";
+    loadingDiv.style.backgroundColor = "rgba(0, 0, 0, 0.7)";
+    loadingDiv.style.padding = "20px";
+    loadingDiv.style.position = "fixed";
+    loadingDiv.style.top = "50%";
+    loadingDiv.style.left = "50%";
+    loadingDiv.style.transform = "translate(-50%, -50%)";
+    loadingDiv.style.borderRadius = "5px";
+    document.body.appendChild(loadingDiv);
+}
+
+function removeLoadingMessage() {
+    const loadingDiv = document.getElementById("loading-message");
+    if (loadingDiv) {
+        loadingDiv.remove();
+    }
 }
 
 function summarizeVideo(youtubeUrl) {

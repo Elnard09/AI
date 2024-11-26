@@ -45,6 +45,9 @@
             <div class="class-grid">
                 <!-- Video Summarizer -->
                 <div class="class-list">
+                    <div>
+                        <h3>Video Summarizer</h3>
+                    </div>
                     <div class="class-info youtube-input">
                         <img src="{{ url_for('static', filename='image/youtube-img.png') }}" alt="Youtube image icon" id="IMGYOUTUBEICON">
                         <input type="text" id="user-chat-ai-input" placeholder="Enter Youtube Video Link...">
@@ -56,6 +59,9 @@
                 </div>
                 <!-- File Summarizer -->
                 <div class="class-list">
+                    <div>
+                        <h3>File Summarizer</h3>
+                    </div>
                     <div class="class-info file-upload">
                         <img src="{{ url_for('static', filename='image/document.jpg') }}" alt="File image icon" id="IMGYOUTUBEICON">
                         <input type="file" id="user-chat-ai-input-file">
@@ -67,19 +73,55 @@
                 </div>    
                 <!-- Code Creator -->
                 <div class="class-list">
-                    <div class="class-info file-upload">
-                        <img src="{{ url_for('static', filename='image/code.jpg') }}" alt="File image icon" id="IMGYOUTUBEICON">
-                        <input type="text" id="code-creator-input" placeholder="Ask a coding question (e.g., 'How do I write a Python function?')...">
-                        <button class="submit-btn" id="submit-chat-ai-button-file">➔</button>
+                    <div>
+                        <h3>Code Analyzer</h3>
+                    </div>
+                    <div class="class-info youtube-upload">
+                        <img src="{{ url_for('static', filename='image/code.jpg') }}" alt="Code image icon" id="IMGYOUTUBEICON">
+                        <input type="text" id="code-creator-input" placeholder="Enter or paste your code here...">
+                        <button class="submit-btn" id="submit-chat-ai-button-code">➔</button>
                     </div>
                     <div>
-                        <p class="content-text">Ask a question to generate or analyze code, and receive expert AI-generated responses.</p>
+                        <p class="content-text">Ask a question to generate or analyze code, and receive detailed explanations and insights.</p>
                     </div>
                 </div>
             </div>
         </main>
     </div>
     <script src="{{ url_for('static', filename='scrip.js') }}"></script>
+    <script>
+        document.getElementById('summarizeCodeButton').addEventListener('click', async () => {
+            const codeBlock = document.getElementById('codeInput').value;
+    
+            if (!codeBlock.trim()) {
+                alert('Please enter a code block.');
+                return;
+            }
+    
+            try {
+                const response = await fetch('/summarize-code', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ code: codeBlock })
+                });
+    
+                const data = await response.json();
+    
+                if (response.ok) {
+                    const outputDiv = document.getElementById('codeSummaryOutput');
+                    outputDiv.style.display = 'block';
+                    outputDiv.textContent = data.explanation;
+                } else {
+                    alert(data.error || 'Failed to summarize the code.');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while summarizing the code.');
+            }
+        });
+    </script>
     <!-- <script src="../static/script.js"></script> -->
 </body>
 </html>
