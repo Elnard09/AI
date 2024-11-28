@@ -1,10 +1,14 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session
+from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session, send_file
 from flask_login import login_required, LoginManager, UserMixin, logout_user, current_user
 from googleapiclient.discovery import build
 from youtube_transcript_api import YouTubeTranscriptApi
+from PIL import Image
 import openai
+import uuid
 import asyncio
+import pytesseract
 import pyttsx3
+import requests
 from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
 import os
@@ -86,8 +90,22 @@ class ChatMessage(db.Model):
 with app.app_context():
     db.create_all()
     
+def generate_image(prompt, size="1024x1024"):
+    response = openai.Image.create(
+        prompt=prompt,
+        n=1,
+        size=size
+    )
+    # Get the URL of the generated image
+    image_url = response['data'][0]['url']
+    return image_url
 
-
+# Save the image locally if needed
+def save_image_from_url(image_url, save_path):
+    image_data = requests.get(image_url).content
+    with open(save_path, 'wb') as image_file:
+        image_file.write(image_data)
+    
 
 def create_chat_session(user_id, title, description):
     chat_session = ChatSession(
@@ -288,12 +306,14 @@ def process_youtube_link():
 def ask_question():
     try:
         data = request.get_json()
-        youtube_link = data.get('youtube_url')  # This will be None for file-based questions
+        youtube_link = data.get('youtube_url')  # This will be None for file-based or image-based questions
         question = data.get('question')
         session_id = data.get('session_id')  # Get session ID if provided
+        image_based = data.get('image_based', False)  # Flag to handle image-based questions
+        image_prompt = data.get('image_prompt', '')  # Prompt for image generation
 
-        if not question:
-            return jsonify({'error': 'Question not provided.'}), 400
+        if not question and not image_based:
+            return jsonify({'error': 'Question or image prompt must be provided.'}), 400
 
         video_data = None
 
@@ -306,11 +326,11 @@ def ask_question():
         else:
             # Handle file-based questions
             file_summary = session.get('fileSummary')  # Use Flask session to store file summary
-            if not file_summary:
+            if not file_summary and not image_based:
                 return jsonify({'error': 'No file summary found. Please upload a file or provide a YouTube link.'}), 400
             video_data = ("Uploaded File", "File summary", file_summary)
 
-        if not video_data:
+        if not video_data and not image_based:
             return jsonify({'error': 'Content not found.'}), 404
 
         # Create a new session if one does not exist
@@ -322,26 +342,49 @@ def ask_question():
             )
 
         # Save the user question
-        save_message(session_id, question, is_user=True)
+        if question:
+            save_message(session_id, question, is_user=True)
 
-        # Generate AI response
-        ai_response = get_openai_response(question, video_data)
+        if image_based and image_prompt:
+            # Generate an image using OpenAI's DALL-E API
+            response = openai.Image.create(
+                prompt=image_prompt,
+                n=1,
+                size='1024x1024'
+            )
+            image_url = response['data'][0]['url']
 
-        # Save the AI response
-        save_message(session_id, ai_response, is_user=False)
+            # Download the image and save it locally
+            image_path = os.path.join(app.config['UPLOAD_FOLDER'], f"{uuid.uuid4()}.png")
+            image_data = requests.get(image_url).content
+            with open(image_path, 'wb') as f:
+                f.write(image_data)
 
-        # Dynamically generate and update title and description
-        title, description = get_dynamic_title_and_description(question, ai_response)
-        chat_session = ChatSession.query.get(session_id)
-        chat_session.title = title
-        chat_session.description = description
-        db.session.commit()
+            # Save the generated image reference to the chat session
+            save_message(session_id, f"Generated Image: {image_path}", is_user=False)
 
-        return jsonify({'response': ai_response, 'session_id': session_id})
+            # Return the generated image as a response
+            return send_file(image_path, mimetype='image/png')
+
+        # Generate AI response for text-based or YouTube questions
+        if question:
+            ai_response = get_openai_response(question, video_data)
+            save_message(session_id, ai_response, is_user=False)
+
+            # Dynamically generate and update title and description
+            title, description = get_dynamic_title_and_description(question, ai_response)
+            chat_session = ChatSession.query.get(session_id)
+            chat_session.title = title
+            chat_session.description = description
+            db.session.commit()
+
+            return jsonify({'response': ai_response, 'session_id': session_id})
+
+        return jsonify({'error': 'Invalid request. No valid question or image prompt provided.'}), 400
 
     except Exception as e:
-        logging.error(f"Error asking question: {e}")
-        return jsonify({'error': str(e)}), 400
+        logging.error(f"Error in ask_question: {e}")
+        return jsonify({'error': str(e)}), 500
 
 # Main route to render the interface
 @app.route('/')
@@ -692,6 +735,44 @@ def summarize_code():
     except Exception as e:
         logging.error(f"Error summarizing code: {e}")
         return jsonify({'error': 'Failed to summarize the code.'}), 500
+    
+@app.route('/analyze-image', methods=['POST'])
+@login_required
+def analyze_image():
+    if 'image' not in request.files:
+        return jsonify({'error': 'No image uploaded.'}), 400
+
+    image = request.files['image']
+    if image.filename == '':
+        return jsonify({'error': 'No file selected.'}), 400
+
+    try:
+        # Save the image temporarily
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(image.filename))
+        image.save(filepath)
+
+        # Extract text from the image using Tesseract
+        extracted_text = pytesseract.image_to_string(Image.open(filepath))
+
+        # Generate analysis using OpenAI
+        analysis_prompt = f"Analyze the following text extracted from an image:\n{extracted_text}\n\nAnalysis:"
+        messages = [
+            {"role": "system", "content": "You are an AI that analyzes images and provides insights based on extracted text or image features."},
+            {"role": "user", "content": analysis_prompt}
+        ]
+
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=messages,
+            temperature=0.7
+        )
+
+        analysis = response['choices'][0]['message']['content']
+
+        return jsonify({'analysis': analysis})
+    except Exception as e:
+        logging.error(f"Error analyzing image: {e}")
+        return jsonify({'error': 'Failed to analyze the image.'}), 500
 
 
 if __name__ == '__main__':
