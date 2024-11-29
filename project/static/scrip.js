@@ -21,11 +21,14 @@ function initializePage() {
     const submitBtn = document.getElementById('submit-chat-ai-button');
     const userInput = document.getElementById('user-chat-ai-input');
     const sidebar = document.getElementById('sidebar');
+    const chatWindow = document.getElementById('chat-window');
 
+    // Ensure sidebar functionality is initialized
     if (!sidebar) {
         initializeSidebarFunctionality();
     }
 
+    // Set up submission handling for input on summarizer.html
     if (submitBtn && userInput) {
         submitBtn.addEventListener('click', function () {
             const inputText = userInput.value.trim();
@@ -39,27 +42,28 @@ function initializePage() {
                     showError('Please enter a valid YouTube URL');
                     return;
                 }
-                summarizeVideo(inputText);
+                summarizeVideo(inputText); // Handle YouTube link submission
             } else if (currentPath.includes('/chatAI')) {
                 if (inputText) {
                     sessionStorage.setItem('initialMessage', inputText);
                     sessionStorage.setItem('sourcePage', currentPath);
-                    window.location.href = "/chatAI";
+                    window.location.href = "/chatAI"; // Redirect with input
                 }
             }
         });
 
         userInput.addEventListener('keypress', function (e) {
             if (e.key === 'Enter') {
-                submitBtn.click();
+                submitBtn.click(); // Handle "Enter" key as submit
             }
         });
     }
 
+    // Handle chatAI.html logic
     if (currentPath.includes('/chatAI')) {
-        const chatWindow = document.getElementById("chat-window");
         const fileSummary = sessionStorage.getItem("fileSummary");
         const aiMessage = sessionStorage.getItem("aiMessage");
+        const youtubeOptions = sessionStorage.getItem('youtubeSummaryOptions');
 
         // Display file summary if available
         if (fileSummary) {
@@ -73,9 +77,20 @@ function initializePage() {
             sessionStorage.removeItem("aiMessage"); // Clear after use
         }
 
-        initializeChatAI(); // Continue with the chat initialization
+        // Handle YouTube video summary options
+        if (youtubeOptions) {
+            const options = JSON.parse(youtubeOptions);
+            displayOptionsInChat(options); // Display options dynamically in chat
+            sessionStorage.removeItem('youtubeSummaryOptions'); // Clear after display
+        } else {
+            initializeChatAI(); // Initialize chat if no options are provided
+        }
+
+        // Always show the chat window
+        chatWindow.style.display = 'block';
     }
 }
+
 
 // ===============================
 // UI and Modal Functions
@@ -174,36 +189,23 @@ function initializeNavigationListeners() {
 
 function initializeChatAI() {
     const chatWindow = document.getElementById('chat-window');
-    if (!chatWindow) {
-        console.error("Chat window element not found.");
-        return;
-    }
-
     const chatInputSection = document.getElementById('chat-input-section');
     const submitBtn = document.getElementById('chat-submit-btn');
     const inputField = document.getElementById('chat-input');
-    const youtubeLink = sessionStorage.getItem('youtubeLink');
-    const sessionId = sessionStorage.getItem('currentSessionId');
-    const params = new URLSearchParams(window.location.search);
-    const summarizerType = params.get('summarizer_type');
+    const youtubeLink = sessionStorage.getItem('youtubeLink'); // For new session
+    const sessionId = sessionStorage.getItem('currentSessionId'); // For existing session
 
     chatWindow.style.display = 'block';
     chatInputSection.style.display = 'flex';
 
-    // Handle different summarizer types
-    if (summarizerType === 'video') {
-        const options = JSON.parse(sessionStorage.getItem('youtubeSummaryOptions'));
-        setupVideoSummarizerOptions(options);
-    } else if (summarizerType === 'file') {
-        displayAIResponse("You can now ask questions based on the summarized file.");
-    } else if (summarizerType === 'code') {
-        displayAIResponse("Code analysis is ready. You can ask questions.");
-    } else if (youtubeLink) {
+    if (youtubeLink) {
+        // Always display the "ask questions" message when a new link is summarized
         displayAIResponse('You can now ask questions based on the summarized video.');
-        sessionStorage.removeItem('youtubeLink');
+        sessionStorage.removeItem('youtubeLink'); // Clear after displaying to avoid duplicates
     }
 
     if (sessionId) {
+        // Load previous messages for an existing session
         fetch(`/chat-session/${sessionId}`)
             .then(response => response.json())
             .then(session => {
@@ -223,12 +225,15 @@ function initializeChatAI() {
             });
     }
 
+    // Handle user input and query submission
     submitBtn.addEventListener('click', () => {
         const question = inputField.value.trim();
         if (!question) return;
 
         displayUserMessage(question);
         inputField.value = '';
+
+        // Use askQuestion function for handling the request
         askQuestion(question, youtubeLink, sessionId);
     });
 
@@ -237,70 +242,95 @@ function initializeChatAI() {
     });
 }
 
-function setupVideoSummarizerOptions() {
-    fetch('/get_video_summary')
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) {
-                throw new Error(data.error);
-            }
+function setupVideoSummarizerOptions(options) {
+    const chatWindow = document.getElementById('chat-window');
+    const optionsContainer = document.createElement('div');
+    optionsContainer.className = 'ai-options';
 
-            const options = data.options;
-            const optionsMessage = `
-                <div class="ai-options">
-                    <div class="option-preview" id="toc-timestamps-container">
-                        <p><strong>1. A Table of Contents with Timestamps</strong></p>
-                        <p>${options.toc_timestamps}</p>
-                        <button class="option-button" id="toc-timestamps">Select</button>
-                    </div>
-                    <div class="option-preview" id="toc-timestamps-bullets-container">
-                        <p><strong>2. A Table of Contents with 2 Explanatory Bullet Points</strong></p>
-                        <p>${options.toc_timestamps_bullets}</p>
-                        <button class="option-button" id="toc-timestamps-bullets">Select</button>
-                    </div>
-                    <div class="option-preview" id="toc-expanded-container">
-                        <p><strong>3. A Table of Contents with 5 Bullet Points</strong></p>
-                        <p>${options.toc_expanded}</p>
-                        <button class="option-button" id="toc-expanded">Select</button>
-                    </div>
-                </div>
-            `;
+    const templates = [
+        { id: 'toc-timestamps', label: 'TOC with timestamps', preview: options.toc_timestamps },
+        { id: 'toc-timestamps-bullets', label: 'TOC with 2 bullet points', preview: options.toc_timestamps_bullets },
+        { id: 'toc-expanded', label: 'TOC with 5 bullet points', preview: options.toc_expanded },
+    ];
 
-            displayAIResponse(optionsMessage);
+    // Dynamically create the option previews
+    templates.forEach(({ id, label, preview }) => {
+        const container = document.createElement('div');
+        container.className = 'option-preview';
+        container.id = `${id}-container`;
 
-            // Attach event listeners to each button
-            document.getElementById('toc-timestamps').addEventListener('click', () =>
-                handleSummaryChoice('toc-timestamps', options)
-            );
-            document.getElementById('toc-timestamps-bullets').addEventListener('click', () =>
-                handleSummaryChoice('toc-timestamps-bullets', options)
-            );
-            document.getElementById('toc-expanded').addEventListener('click', () =>
-                handleSummaryChoice('toc-expanded', options)
-            );
-        })
-        .catch(error => {
-            showError(error.message || 'An error occurred while fetching the video summary.');
-        });
+        const title = document.createElement('p');
+        title.innerHTML = `<strong>${label}</strong>`;
+
+        const previewText = document.createElement('p');
+        previewText.textContent = preview;
+
+        const button = document.createElement('button');
+        button.className = 'option-button';
+        button.textContent = 'Select';
+        button.addEventListener('click', () => handleSummaryChoice(id, options));
+
+        container.append(title, previewText, button);
+        optionsContainer.appendChild(container);
+    });
+
+    chatWindow.appendChild(optionsContainer);
 }
-
 
 function handleSummaryChoice(selectedId, options) {
     // Remove unselected options
-    ['toc-timestamps', 'toc-timestamps-bullets', 'toc-expanded'].forEach((id) => {
+    ['toc-timestamps', 'toc-timestamps-bullets', 'toc-expanded'].forEach(id => {
         if (id !== selectedId) {
             const container = document.getElementById(`${id}-container`);
             if (container) container.remove();
         }
     });
 
-    // Display the selected choice
+    // Display the selected summary
     const selectedText = options[selectedId];
-    displayAIResponse(`<p><strong>You selected:</strong> ${selectedText}</p>`);
+    displayAIResponse(`<strong>You selected:</strong> ${selectedText}`);
 
     // Enable the chat input for further interaction
     const chatInputSection = document.getElementById('chat-input-section');
     chatInputSection.style.display = 'flex';
+}
+
+function displayOptionsInChat(options) {
+    const optionsMessage = `
+        <div class="ai-options">
+            <div id="option-toc-timestamps">
+                <p><strong>1. A Table of Contents with Timestamps</strong></p>
+                <p>${options.toc_timestamps}</p>
+                <button class="option-button" onclick="selectOption('toc_timestamps', \`${options.toc_timestamps}\`)">Select</button>
+            </div>
+            <div id="option-toc-bullets-2">
+                <p><strong>2. A Table of Contents with 2 Bullet Points</strong></p>
+                <p>${options.toc_bullets_2}</p>
+                <button class="option-button" onclick="selectOption('toc_bullets_2', \`${options.toc_bullets_2}\`)">Select</button>
+            </div>
+            <div id="option-toc-bullets-5">
+                <p><strong>3. A Table of Contents with 5 Bullet Points</strong></p>
+                <p>${options.toc_bullets_5}</p>
+                <button class="option-button" onclick="selectOption('toc_bullets_5', \`${options.toc_bullets_5}\`)">Select</button>
+            </div>
+        </div>
+    `;
+    displayAIResponse(optionsMessage);
+}
+
+function selectOption(selectedId, selectedPreview) {
+    sessionStorage.setItem('selectedOptionContent', selectedPreview);
+
+    // Remove unselected options
+    ['option-toc-timestamps', 'option-toc-bullets-2', 'option-toc-bullets-5'].forEach(id => {
+        const element = document.getElementById(id);
+        if (id !== selectedId && element) {
+            element.remove();
+        }
+    });
+
+    displayAIResponse(`<strong>You selected:</strong><br>${selectedPreview}`);
+    document.getElementById('chat-input-section').style.display = 'flex';
 }
 
 
@@ -322,6 +352,9 @@ function askQuestion(question, youtubeUrl, sessionId = null) {
     submitBtn.disabled = true;
     submitBtn.textContent = 'Processing...';
 
+    // Retrieve the selected context from sessionStorage
+    const selectedOptionContent = sessionStorage.getItem('selectedOptionContent');
+
     fetch('/ask_question', {
         method: 'POST',
         headers: {
@@ -331,6 +364,7 @@ function askQuestion(question, youtubeUrl, sessionId = null) {
             youtube_url: youtubeUrl,
             question: question,
             session_id: sessionId,
+            context: selectedOptionContent, // Include the selected summary context
         }),
     })
     .then(response => response.json())
@@ -344,6 +378,7 @@ function askQuestion(question, youtubeUrl, sessionId = null) {
             sessionStorage.setItem('currentSessionId', data.session_id);
         }
 
+        // Display AI's response in the chat
         displayAIResponse(data.response);
     })
     .catch(error => {
@@ -359,6 +394,7 @@ function askQuestion(question, youtubeUrl, sessionId = null) {
     });
 }
 
+
 function displayUserMessage(messageText) {
     const chatWindow = document.getElementById('chat-window');
     const userMessageElement = document.createElement('div');
@@ -367,7 +403,6 @@ function displayUserMessage(messageText) {
     chatWindow.appendChild(userMessageElement);
     chatWindow.scrollTop = chatWindow.scrollHeight;
 }
-
 // function displayAIResponse(responseText) {
 //     const chatWindow = document.getElementById('chat-window');
 //     const responseElement = document.createElement('div');
@@ -396,13 +431,23 @@ function displayAIResponse(responseText) {
 
     const responseElement = document.createElement('div');
     responseElement.className = 'ai-message';
-    responseElement.innerHTML = responseText;
 
+    // Use smartFormatResponse to process the response text
+    const formattedText = smartFormatResponse(responseText, false);
+    responseElement.innerHTML = formattedText
+        .split('\n')
+        .filter(line => line.trim() !== '') // Remove empty lines
+        .join('<br>'); // Convert to HTML-friendly line breaks
+
+    // Apply styling to ensure proper display
+    responseElement.style.whiteSpace = 'pre-wrap';
+    responseElement.style.wordBreak = 'break-word';
+    responseElement.style.lineHeight = '1.5';
+
+    // Append the formatted response to the chat window
     chatWindow.appendChild(responseElement);
-    chatWindow.scrollTop = chatWindow.scrollHeight;
+    chatWindow.scrollTop = chatWindow.scrollHeight; // Scroll to the bottom
 }
-
-
 
 
 // Improve the formatting and structure of AI responses to make it more context-aware and visually pleasing
@@ -1159,33 +1204,34 @@ function summarizeVideo(youtubeUrl) {
     loadingDiv.style.transform = 'translate(-50%, -50%)';
     loadingDiv.style.borderRadius = '5px';
     document.body.appendChild(loadingDiv);
-
+    
     submitBtn.disabled = true;
     submitBtn.textContent = 'Processing...';
-
+    
     fetch('/process_youtube_link', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ youtube_url: youtubeUrl }),
     })
-        .then((response) => response.json())
-        .then((data) => {
-            if (data.error) {
-                throw new Error(data.error);
-            }
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) throw new Error(data.error);
 
-            setupVideoSummarizerOptions(data.options);
+        // Store the dynamic options in sessionStorage
+        sessionStorage.setItem('youtubeSummaryOptions', JSON.stringify(data.options));
 
-            sessionStorage.setItem('youtubeSummaryOptions', JSON.stringify(data.options));
-        })
-        .catch((error) => {
-            showError(error.message || 'An error occurred. Please try again.');
-        })
-        .finally(() => {
-            if (document.getElementById('loading-message')) {
-                document.getElementById('loading-message').remove();
-            }
-            submitBtn.disabled = false;
-            submitBtn.textContent = '➔';
-        });
+        // Redirect to chat interface
+        window.location.href = '/chatAI';
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showError(error.message || 'An error occurred. Please try again.');
+    })
+    .finally(() => {
+        if (document.getElementById('loading-message')) {
+            document.getElementById('loading-message').remove();
+        }
+        submitBtn.disabled = false;
+        submitBtn.textContent = '➔';
+    });
 }

@@ -188,16 +188,6 @@ def get_video_data(video_id):
         return video.title, video.description, video.transcript
     return None
 
-# Example of backend preview generation functions
-def generate_toc_with_timestamps_preview(transcript):
-    # Generate a simple preview with timestamps (example logic)
-    return "Section 1 (00:01), Section 2 (00:15), Section 3 (01:45)..."
-
-def generate_toc_with_bullets_preview(transcript, bullet_count):
-    # Generate a preview with a specific number of bullets (example logic)
-    bullets = [f"Bullet Point {i}" for i in range(1, bullet_count + 1)]
-    return "\n".join(bullets)
-
 # Function to interact with OpenAI and get both a response and a session summary
 def get_openai_response(prompt, video_data, generate_summary=False):
     video_title, video_description, video_transcript = video_data
@@ -288,140 +278,100 @@ def process_youtube_link():
             # Get video info and transcript if not found in database
             title, description, transcript = get_video_info_and_transcript(video_id)
 
-            # Save video to database
+            # Save video to the database
             save_video_to_db(video_id, title, description, transcript)
             video_data = (title, description, transcript)
         else:
             title, description, transcript = video_data
 
-        # Generate previews for each option
-        options = {
-            "toc_timestamps": generate_toc_with_timestamps_preview(transcript),
-            "toc_timestamps_bullets": generate_toc_with_bullets_preview(transcript, 2),
-            "toc_expanded": generate_toc_with_bullets_preview(transcript, 5),
-        }
+        # Dynamically generate previews
+        toc_timestamps = generate_toc_with_timestamps_preview(transcript)
+        toc_bullets_2 = generate_toc_with_bullets_preview(transcript, 2)
+        toc_bullets_5 = generate_toc_with_bullets_preview(transcript, 5)
 
-        # Store only the video_id in the session
-        session['video_id'] = video_id
-
-        # Return previews to the frontend
+        # Return the dynamic options
         return jsonify({
             'message': 'Video processed successfully!',
-            'options': options,
+            'transcript': transcript,
+            'title': title,
+            'description': description,
+            'options': {
+                "toc_timestamps": toc_timestamps,
+                "toc_bullets_2": toc_bullets_2,
+                "toc_bullets_5": toc_bullets_5,
+            }
         })
 
     except Exception as e:
         logging.error(f"Error processing YouTube link: {e}")
         return jsonify({'error': str(e)}), 400
 
-@app.route('/get_video_summary', methods=['GET'])
-def get_video_summary():
-    try:
-        video_id = session.get('video_id')
-        if not video_id:
-            return jsonify({'error': 'No video ID found in session.'}), 400
+def generate_toc_with_timestamps_preview(transcript):
+    # Example logic for timestamps-only summary
+    sections = transcript.split(".")[:5]  # Extract 5 sample sections
+    return "\n".join([f"Section {i+1} (00:{i*10:02d}): {section.strip()}" for i, section in enumerate(sections)])
 
-        video_data = get_video_data(video_id)
-        if not video_data:
-            return jsonify({'error': 'Video data not found.'}), 404
+def generate_toc_with_bullets_preview(transcript, bullet_count):
+    # Split the transcript into sections
+    sections = transcript.split('.')[:5]  # Limit to 5 sections for brevity
+    bullets = []
 
-        title, description, transcript = video_data
-        options = {
-            "toc_timestamps": generate_toc_with_timestamps_preview(transcript),
-            "toc_timestamps_bullets": generate_toc_with_bullets_preview(transcript, 2),
-            "toc_expanded": generate_toc_with_bullets_preview(transcript, 5),
-        }
+    for section in sections:
+        if not section.strip():
+            continue  # Skip empty sections
+        # Generate meaningful insights using OpenAI GPT
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You are an assistant that extracts meaningful insights and key takeaways from text."},
+                {"role": "user", "content": f"Extract {bullet_count} meaningful key takeaways or insights from the following section:\n{section.strip()}"}
+            ],
+            temperature=0.7
+        )
+        section_bullets = response['choices'][0]['message']['content'].split('\n')[:bullet_count]
+        bullets.append(f"Section: {section.strip()}\n" + '\n'.join([f"- {bullet.strip()}" for bullet in section_bullets if bullet.strip()]))
 
-        return jsonify({
-            'title': title,
-            'description': description,
-            'options': options,
-        })
-
-    except Exception as e:
-        logging.error(f"Error fetching video summary: {e}")
-        return jsonify({'error': str(e)}), 500
+    return '\n\n'.join(bullets)
 
 @app.route('/ask_question', methods=['POST'])
 @login_required
 def ask_question():
     try:
         data = request.get_json()
-        youtube_link = data.get('youtube_url')  # This will be None for file-based or image-based questions
+        youtube_link = data.get('youtube_url')  # For YouTube-based questions
         question = data.get('question')
-        session_id = data.get('session_id')  # Get session ID if provided
-        image_based = data.get('image_based', False)  # Flag to handle image-based questions
-        image_prompt = data.get('image_prompt', '')  # Prompt for image generation
+        session_id = data.get('session_id')  # For chat session continuity
+        context = data.get('context', '')  # Selected summary content
 
-        if not question and not image_based:
-            return jsonify({'error': 'Question or image prompt must be provided.'}), 400
+        if not question:
+            return jsonify({'error': 'Question must be provided.'}), 400
 
         video_data = None
-
         if youtube_link:
             # Handle YouTube-based questions
             video_id = extract_video_id(youtube_link)
             if not video_id:
                 return jsonify({'error': 'Invalid YouTube URL provided.'}), 400
             video_data = get_video_data(video_id)
-        else:
-            # Handle file-based questions
-            file_summary = session.get('fileSummary')  # Use Flask session to store file summary
-            if not file_summary and not image_based:
-                return jsonify({'error': 'No file summary found. Please upload a file or provide a YouTube link.'}), 400
-            video_data = ("Uploaded File", "File summary", file_summary)
 
-        if not video_data and not image_based:
-            return jsonify({'error': 'Content not found.'}), 404
+        # Generate AI response
+        ai_prompt = (
+            f"Context:\n{context}\n\n"
+            f"Question:\n{question}\n\n"
+            "AI Response:"
+        )
 
-        # Create a new session if one does not exist
-        if not session_id:
-            session_id = create_chat_session(
-                user_id=current_user.id,
-                title="Chat with AI",
-                description="Conversation based on the summarized content."
-            )
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You are an assistant that provides insights based on selected content."},
+                {"role": "user", "content": ai_prompt}
+            ],
+            temperature=0.7
+        )
 
-        # Save the user question
-        if question:
-            save_message(session_id, question, is_user=True)
-
-        if image_based and image_prompt:
-            # Generate an image using OpenAI's DALL-E API
-            response = openai.Image.create(
-                prompt=image_prompt,
-                n=1,
-                size='1024x1024'
-            )
-            image_url = response['data'][0]['url']
-
-            # Download the image and save it locally
-            image_path = os.path.join(app.config['UPLOAD_FOLDER'], f"{uuid.uuid4()}.png")
-            image_data = requests.get(image_url).content
-            with open(image_path, 'wb') as f:
-                f.write(image_data)
-
-            # Save the generated image reference to the chat session
-            save_message(session_id, f"Generated Image: {image_path}", is_user=False)
-
-            # Return the generated image as a response
-            return send_file(image_path, mimetype='image/png')
-
-        # Generate AI response for text-based or YouTube questions
-        if question:
-            ai_response = get_openai_response(question, video_data)
-            save_message(session_id, ai_response, is_user=False)
-
-            # Dynamically generate and update title and description
-            title, description = get_dynamic_title_and_description(question, ai_response)
-            chat_session = ChatSession.query.get(session_id)
-            chat_session.title = title
-            chat_session.description = description
-            db.session.commit()
-
-            return jsonify({'response': ai_response, 'session_id': session_id})
-
-        return jsonify({'error': 'Invalid request. No valid question or image prompt provided.'}), 400
+        ai_response = response['choices'][0]['message']['content']
+        return jsonify({'response': ai_response, 'session_id': session_id})
 
     except Exception as e:
         logging.error(f"Error in ask_question: {e}")
