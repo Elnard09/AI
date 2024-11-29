@@ -492,3 +492,36 @@ input[type="text"] {
 .popup-buttons button:hover {
     opacity: 0.8;
 }
+
+/* Options Container Styling for AI Responses */
+.ai-options {
+    margin: 15px 0;
+    padding: 10px;
+    background-color: #f1f1f1; /* Match AI message background */
+    border-radius: 10px; /* Same as AI messages */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Consistent shadowing */
+}
+
+/* Option Button Styling */
+.option-button {
+    margin: 10px 0;
+    padding: 12px 20px;
+    background-color: #4CAF50; /* Align with submit button green */
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    text-align: center; /* Center text within the button */
+    transition: background-color 0.3s ease; /* Smooth color change */
+}
+
+.option-button:hover {
+    background-color: #45a049; /* Slightly darker green on hover */
+}
+
+/* For alignment with AI Messages */
+.ai-message .ai-options {
+    margin: 0; /* Remove extra margin from the message */
+    padding: 0; /* Consistent padding with AI message */
+}
