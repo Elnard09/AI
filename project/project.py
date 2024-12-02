@@ -188,16 +188,6 @@ def get_video_data(video_id):
         return video.title, video.description, video.transcript
     return None
 
-# Example of backend preview generation functions
-def generate_toc_with_timestamps_preview(transcript):
-    # Generate a simple preview with timestamps (example logic)
-    return "Section 1 (00:01), Section 2 (00:15), Section 3 (01:45)..."
-
-def generate_toc_with_bullets_preview(transcript, bullet_count):
-    # Generate a preview with a specific number of bullets (example logic)
-    bullets = [f"Bullet Point {i}" for i in range(1, bullet_count + 1)]
-    return "\n".join(bullets)
-
 # Function to interact with OpenAI and get both a response and a session summary
 def get_openai_response(prompt, video_data, generate_summary=False):
     video_title, video_description, video_transcript = video_data
@@ -269,6 +259,7 @@ def text_to_speech_route():
     # Return the path of the saved audio file
     return jsonify({'audio_file': AUDIO_FILE_PATH})
 
+
 @app.route('/process_youtube_link', methods=['POST'])
 def process_youtube_link():
     try:
@@ -288,59 +279,27 @@ def process_youtube_link():
             # Get video info and transcript if not found in database
             title, description, transcript = get_video_info_and_transcript(video_id)
 
+            # Check if the video already exists before saving
+            existing_video = YouTubeVideo.query.filter_by(video_id=video_id).first()
+            if existing_video:
+                return jsonify({'message': 'Video already exists in the database.', 'transcript': transcript})
+
             # Save video to database
             save_video_to_db(video_id, title, description, transcript)
             video_data = (title, description, transcript)
         else:
             title, description, transcript = video_data
 
-        # Generate previews for each option
-        options = {
-            "toc_timestamps": generate_toc_with_timestamps_preview(transcript),
-            "toc_timestamps_bullets": generate_toc_with_bullets_preview(transcript, 2),
-            "toc_expanded": generate_toc_with_bullets_preview(transcript, 5),
-        }
-
-        # Store only the video_id in the session
-        session['video_id'] = video_id
-
-        # Return previews to the frontend
+        # Return the transcript immediately after processing the link
         return jsonify({
             'message': 'Video processed successfully!',
-            'options': options,
+            'transcript': transcript,
+            'title': title,
+            'description': description
         })
-
     except Exception as e:
         logging.error(f"Error processing YouTube link: {e}")
         return jsonify({'error': str(e)}), 400
-
-@app.route('/get_video_summary', methods=['GET'])
-def get_video_summary():
-    try:
-        video_id = session.get('video_id')
-        if not video_id:
-            return jsonify({'error': 'No video ID found in session.'}), 400
-
-        video_data = get_video_data(video_id)
-        if not video_data:
-            return jsonify({'error': 'Video data not found.'}), 404
-
-        title, description, transcript = video_data
-        options = {
-            "toc_timestamps": generate_toc_with_timestamps_preview(transcript),
-            "toc_timestamps_bullets": generate_toc_with_bullets_preview(transcript, 2),
-            "toc_expanded": generate_toc_with_bullets_preview(transcript, 5),
-        }
-
-        return jsonify({
-            'title': title,
-            'description': description,
-            'options': options,
-        })
-
-    except Exception as e:
-        logging.error(f"Error fetching video summary: {e}")
-        return jsonify({'error': str(e)}), 500
 
 @app.route('/ask_question', methods=['POST'])
 @login_required
