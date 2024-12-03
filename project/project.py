@@ -315,6 +315,11 @@ def ask_question():
         if not question and not image_based:
             return jsonify({'error': 'Question or image prompt must be provided.'}), 400
 
+        # Clear old messages
+        if session_id:
+            ChatMessage.query.filter_by(session_id=session_id).delete()
+            db.session.commit()
+
         video_data = None
 
         if youtube_link:
@@ -334,12 +339,13 @@ def ask_question():
             return jsonify({'error': 'Content not found.'}), 404
 
         # Create a new session if one does not exist
-        if not session_id:
+        if not session_id or data.get('start_new_session', False):  # Check for explicit new session flag
             session_id = create_chat_session(
-                user_id=current_user.id,
-                title="Chat with AI",
-                description="Conversation based on the summarized content."
-            )
+            user_id=current_user.id,
+            title="New Chat Session",
+            description="A fresh conversation with the AI."
+    )
+
 
         # Save the user question
         if question:
@@ -385,6 +391,7 @@ def ask_question():
     except Exception as e:
         logging.error(f"Error in ask_question: {e}")
         return jsonify({'error': str(e)}), 500
+
 
 # Main route to render the interface
 @app.route('/')
