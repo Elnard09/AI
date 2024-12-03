@@ -51,6 +51,40 @@ ALLOWED_EXTENSIONS = {'txt', 'pdf', 'docx'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+class YoutubeSummary(db.Model):
+    id = db.Column(db.Integer, primary_key = True)
+    video_id = db.Column(db.String(100), unique=True, nullable=False)
+    title = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    transcript = db.Column(db.Text, nullable=False)
+    summary = db.Column(db.Text, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    
+class FileSummary(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    file_name = db.Column(db.String(255), nullable=False)
+    summary = db.Column(db.Text, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    upload_date = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class CodeAnalysis(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    code = db.Column(db.Text, nullable=False)
+    explanation = db.Column(db.Text, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    analysis_date = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class ImageAnalysis(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    image_path = db.Column(db.String(255), nullable=False)
+    extracted_text = db.Column(db.Text, nullable=False)
+    analysis = db.Column(db.Text, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    analysis_date = db.Column(db.DateTime, default=datetime.utcnow)
+
+
 # Model to store video information
 # Updated YouTubeVideo model (optional; no foreign keys required for this example)
 class YouTubeVideo(db.Model):
@@ -261,11 +295,9 @@ def text_to_speech_route():
 
 
 @app.route('/process_youtube_link', methods=['POST'])
+@login_required
 def process_youtube_link():
     try:
-        # Clear the current session ID when a new link is processed
-        session.pop('current_session_id', None)
-
         data = request.get_json()
         youtube_link = data['youtube_url']
         video_id = extract_video_id(youtube_link)
@@ -273,33 +305,48 @@ def process_youtube_link():
         if not video_id:
             return jsonify({'error': 'Invalid YouTube URL provided.'}), 400
 
-        # Check if video is in the database
-        video_data = get_video_data(video_id)
-        if not video_data:
-            # Get video info and transcript if not found in database
-            title, description, transcript = get_video_info_and_transcript(video_id)
+        existing_summary = YoutubeSummary.query.filter_by(video_id=video_id, user_id=current_user.id).first()
+        if existing_summary:
+            return jsonify({
+                'message': 'Summary already exists in the database.',
+                'summary': existing_summary.summary,
+                'title': existing_summary.title,
+                'description': existing_summary.description
+            })
 
-            # Check if the video already exists before saving
-            existing_video = YouTubeVideo.query.filter_by(video_id=video_id).first()
-            if existing_video:
-                return jsonify({'message': 'Video already exists in the database.', 'transcript': transcript})
+        # Process and summarize
+        title, description, transcript = get_video_info_and_transcript(video_id)
+        summary_prompt = f"Summarize this YouTube video transcript:\n\n{transcript}\n\nSummary:"
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[
+                {"role": "user", "content": summary_prompt}
+            ]
+        )
+        summary = response['choices'][0]['message']['content']
 
-            # Save video to database
-            save_video_to_db(video_id, title, description, transcript)
-            video_data = (title, description, transcript)
-        else:
-            title, description, transcript = video_data
+        # Save to database
+        new_summary = YoutubeSummary(
+            video_id=video_id,
+            title=title,
+            description=description,
+            transcript=transcript,
+            summary=summary,
+            user_id=current_user.id
+        )
+        db.session.add(new_summary)
+        db.session.commit()
 
-        # Return the transcript immediately after processing the link
         return jsonify({
-            'message': 'Video processed successfully!',
-            'transcript': transcript,
+            'message': 'Video summarized successfully!',
+            'summary': summary,
             'title': title,
             'description': description
         })
     except Exception as e:
         logging.error(f"Error processing YouTube link: {e}")
         return jsonify({'error': str(e)}), 400
+
 
 @app.route('/ask_question', methods=['POST'])
 @login_required
@@ -314,11 +361,6 @@ def ask_question():
 
         if not question and not image_based:
             return jsonify({'error': 'Question or image prompt must be provided.'}), 400
-
-        # Clear old messages
-        if session_id:
-            ChatMessage.query.filter_by(session_id=session_id).delete()
-            db.session.commit()
 
         video_data = None
 
@@ -341,10 +383,10 @@ def ask_question():
         # Create a new session if one does not exist
         if not session_id:
             session_id = create_chat_session(
-            user_id=current_user.id,
-            title="Chat with AI",
-            description="Conversation based on the summarized content."
-    )
+                user_id=current_user.id,
+                title="Chat with AI",
+                description="Conversation based on the summarized content."
+            )
 
         # Save the user question
         if question:
@@ -390,7 +432,6 @@ def ask_question():
     except Exception as e:
         logging.error(f"Error in ask_question: {e}")
         return jsonify({'error': str(e)}), 500
-
 
 # Main route to render the interface
 @app.route('/')
@@ -679,29 +720,30 @@ def upload_file():
         file.save(filepath)
 
         try:
-            # Extract text from the uploaded file
             text_content = extract_text_from_file(filepath)
             if not text_content:
                 return jsonify({'error': 'Failed to extract text from the file'}), 400
 
-            # Generate summary using OpenAI
+            # Summarize the content
             summary_prompt = f"Summarize the following text:\n{text_content}\n\nSummary:"
-            messages = [
-                {"role": "system", "content": "You are an AI assistant that summarizes uploaded documents."},
-                {"role": "user", "content": summary_prompt}
-            ]
             response = openai.ChatCompletion.create(
                 model="gpt-4",
-                messages=messages,
-                temperature=0.7
+                messages=[
+                    {"role": "user", "content": summary_prompt}
+                ]
             )
             summary = response['choices'][0]['message']['content']
 
-            # Store the summary in the session
-            session['fileSummary'] = summary
+            # Save to database
+            new_file_summary = FileSummary(
+                file_name=filename,
+                summary=summary,
+                user_id=current_user.id
+            )
+            db.session.add(new_file_summary)
+            db.session.commit()
 
             return jsonify({'summary': summary})
-
         except Exception as e:
             logging.error(f"Error processing file: {e}")
             return jsonify({'error': 'Failed to process the file.'}), 500
@@ -718,29 +760,30 @@ def summarize_code():
         if not code_block:
             return jsonify({'error': 'Code block is required.'}), 400
 
-        # Generate explanation and summary using OpenAI
-        code_prompt = (
-            "Explain the following block of code in simple terms and summarize its purpose:\n\n"
-            f"{code_block}\n\nExplanation and Summary:"
-        )
-
-        messages = [
-            {"role": "system", "content": "You are an AI assistant that explains code to users in simple terms."},
-            {"role": "user", "content": code_prompt}
-        ]
-
+        # Summarize and explain the code
+        prompt = f"Explain this code:\n{code_block}\n\nExplanation:"
         response = openai.ChatCompletion.create(
             model="gpt-4",
-            messages=messages,
-            temperature=0.7
+            messages=[
+                {"role": "user", "content": prompt}
+            ]
         )
-
         explanation = response['choices'][0]['message']['content']
+
+        # Save to database
+        new_code_analysis = CodeAnalysis(
+            code=code_block,
+            explanation=explanation,
+            user_id=current_user.id
+        )
+        db.session.add(new_code_analysis)
+        db.session.commit()
 
         return jsonify({'explanation': explanation})
     except Exception as e:
         logging.error(f"Error summarizing code: {e}")
         return jsonify({'error': 'Failed to summarize the code.'}), 500
+
     
 @app.route('/analyze-image', methods=['POST'])
 @login_required
@@ -753,32 +796,36 @@ def analyze_image():
         return jsonify({'error': 'No file selected.'}), 400
 
     try:
-        # Save the image temporarily
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(image.filename))
         image.save(filepath)
 
-        # Extract text from the image using Tesseract
         extracted_text = pytesseract.image_to_string(Image.open(filepath))
 
-        # Generate analysis using OpenAI
-        analysis_prompt = f"Analyze the following text extracted from an image:\n{extracted_text}\n\nAnalysis:"
-        messages = [
-            {"role": "system", "content": "You are an AI that analyzes images and provides insights based on extracted text or image features."},
-            {"role": "user", "content": analysis_prompt}
-        ]
-
+        # Generate analysis
+        prompt = f"Analyze this extracted text:\n{extracted_text}\n\nAnalysis:"
         response = openai.ChatCompletion.create(
             model="gpt-4",
-            messages=messages,
-            temperature=0.7
+            messages=[
+                {"role": "user", "content": prompt}
+            ]
         )
-
         analysis = response['choices'][0]['message']['content']
+
+        # Save to database
+        new_image_analysis = ImageAnalysis(
+            image_path=filepath,
+            extracted_text=extracted_text,
+            analysis=analysis,
+            user_id=current_user.id
+        )
+        db.session.add(new_image_analysis)
+        db.session.commit()
 
         return jsonify({'analysis': analysis})
     except Exception as e:
         logging.error(f"Error analyzing image: {e}")
         return jsonify({'error': 'Failed to analyze the image.'}), 500
+
 
 
 if __name__ == '__main__':
