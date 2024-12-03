@@ -339,13 +339,12 @@ def ask_question():
             return jsonify({'error': 'Content not found.'}), 404
 
         # Create a new session if one does not exist
-        if not session_id or data.get('start_new_session', False):  # Check for explicit new session flag
+        if not session_id:
             session_id = create_chat_session(
             user_id=current_user.id,
-            title="New Chat Session",
-            description="A fresh conversation with the AI."
+            title="Chat with AI",
+            description="Conversation based on the summarized content."
     )
-
 
         # Save the user question
         if question:
