@@ -727,7 +727,7 @@ def upload_file():
             # Summarize the content
             summary_prompt = f"Summarize the following text:\n{text_content}\n\nSummary:"
             response = openai.ChatCompletion.create(
-                model="gpt-4",
+                model="gpt-4o",
                 messages=[
                     {"role": "user", "content": summary_prompt}
                 ]
@@ -826,6 +826,54 @@ def analyze_image():
         logging.error(f"Error analyzing image: {e}")
         return jsonify({'error': 'Failed to analyze the image.'}), 500
 
+@app.route('/get_dynamic_questions', methods=['POST'])
+@login_required
+def get_dynamic_questions():
+    try:
+        data = request.get_json()
+        youtube_link = data.get('youtube_url', None)
+        file_summary = data.get('file_summary', None)
+
+        # Generate dynamic questions based on the provided context
+        if youtube_link:
+            video_id = extract_video_id(youtube_link)
+            if not video_id:
+                return jsonify({'error': 'Invalid YouTube URL provided.'}), 400
+
+            # Fetch video data from database or external API
+            video_data = get_video_data(video_id)
+            if not video_data:
+                return jsonify({'error': 'Video not found.'}), 404
+
+            # Use AI to generate questions dynamically
+            prompt = (
+                f"Based on the video titled '{video_data[0]}', "
+                f"described as '{video_data[1]}', and its transcript: {video_data[2]}. "
+                "Generate a list of 5 insightful questions a user might ask about this content."
+            )
+        elif file_summary:
+            # Generate questions based on file summary
+            prompt = (
+                f"Based on this summarized text: {file_summary}, "
+                "generate 5 insightful questions a user might ask."
+            )
+        else:
+            return jsonify({'error': 'No context provided.'}), 400
+
+        # Get suggestions from OpenAI API
+        response = openai.ChatCompletion.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "user", "content": prompt}
+            ]
+        )
+        suggestions = response['choices'][0]['message']['content'].strip().split("\n")
+
+        # Return the list of dynamic questions
+        return jsonify({'suggestions': suggestions})
+    except Exception as e:
+        logging.error(f"Error generating dynamic questions: {e}")
+        return jsonify({'error': str(e)}), 500
 
 
 if __name__ == '__main__':
