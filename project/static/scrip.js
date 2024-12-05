@@ -168,6 +168,52 @@ function initializeNavigationListeners() {
     });
 }
 
+function fetchAndDisplaySuggestions(context) {
+    const suggestionsContainer = document.getElementById("suggestions-container");
+    const suggestionsOverlay = document.getElementById("suggestions-overlay");
+
+    // Clear previous suggestions
+    suggestionsContainer.innerHTML = "Loading suggestions...";
+
+    fetch('/get_dynamic_questions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(context),
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.suggestions && data.suggestions.length > 0) {
+            suggestionsContainer.innerHTML = ""; // Clear loading text
+            data.suggestions.forEach(suggestion => {
+                const suggestionBox = document.createElement('div');
+                suggestionBox.className = 'suggestion-box';
+                suggestionBox.textContent = suggestion;
+                suggestionBox.addEventListener('click', () => {
+                    document.getElementById('chat-input').value = suggestion;
+                });
+                suggestionsContainer.appendChild(suggestionBox);
+            });
+            suggestionsOverlay.style.display = "block"; // Show overlay
+        } else {
+            suggestionsContainer.innerHTML = "<p>No suggestions available.</p>";
+        }
+    })
+    .catch(error => {
+        console.error("Error fetching suggestions:", error);
+        suggestionsContainer.innerHTML = "<p>Error loading suggestions.</p>";
+    });
+}
+
+// Fetch suggestions on page load with example context
+document.addEventListener("DOMContentLoaded", () => {
+    const context = {
+        youtube_url: sessionStorage.getItem("youtubeLink"), // Example
+        file_summary: sessionStorage.getItem("fileSummary"), // Example
+    };
+    fetchAndDisplaySuggestions(context);
+});
+
+
 // ===============================
 // Chat Functions (Video Summarizer)
 // ===============================
