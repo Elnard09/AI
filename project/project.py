@@ -176,7 +176,7 @@ def get_video_info_and_transcript(video_id):
     ).execute()
 
     if not video_response['items']:
-        raise ValueError("Video not found.")
+        return None, None, None  # Return three None values if the video is not found.
     
     video_info = video_response['items'][0]['snippet']
     video_title = video_info['title']
@@ -190,6 +190,7 @@ def get_video_info_and_transcript(video_id):
 
     return video_title, video_description, transcript_text
 
+
 # Save the video info to the database
 def save_video_to_db(video_id, title, description, transcript):
     video = YouTubeVideo(video_id=video_id, title=title, description=description, transcript=transcript)
@@ -199,9 +200,17 @@ def save_video_to_db(video_id, title, description, transcript):
 # Retrieve video data from the database
 def get_video_data(video_id):
     video = YouTubeVideo.query.filter_by(video_id=video_id).first()
-    if video:
-        return video.title, video.description, video.transcript
-    return None
+    if not video:
+        # Fetch data from YouTube and save to the database
+        try:
+            title, description, transcript = get_video_info_and_transcript(video_id)
+            save_video_to_db(video_id, title, description, transcript)
+            return title, description, transcript
+        except Exception as e:
+            logging.error(f"Failed to fetch video data: {e}")
+            return None
+    return video.title, video.description, video.transcript
+
 
 # Function to interact with OpenAI and get both a response and a session summary
 def get_openai_response(prompt, video_data, generate_summary=False):
@@ -285,52 +294,32 @@ def process_youtube_link():
         if not video_id:
             return jsonify({'error': 'Invalid YouTube URL provided.'}), 400
 
-        # Check if summary already exists for this user
-        existing_summary = YoutubeSummary.query.filter_by(video_id=video_id, user_id=current_user.id).first()
-        if existing_summary:
-            return jsonify({
-                'message': 'Summary already exists.',
-                'summary': existing_summary.summary,
-                'title': existing_summary.title,
-                'description': existing_summary.description
-            })
+        # Check if the video is already saved in the database
+        video_data = get_video_data(video_id)
+        if not video_data:
+            # Fetch from YouTube API
+            title, description, transcript = get_video_info_and_transcript(video_id)
+            save_video_to_db(video_id, title, description, transcript)
+            video_data = (title, description, transcript)
 
-        # Process and summarize
-        title, description, transcript = get_video_info_and_transcript(video_id)
-        summary_prompt = f"Summarize this YouTube video transcript:\n\n{transcript}\n\nSummary:"
-        response = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=[{"role": "user", "content": summary_prompt}]
-        )
-        summary = response['choices'][0]['message']['content']
-
-        # Save to database
-        new_summary = YoutubeSummary(
-            video_id=video_id,
-            title=title,
-            description=description,
-            transcript=transcript,
-            summary=summary,
-            user_id=current_user.id
-        )
-        db.session.add(new_summary)
-        db.session.commit()
-
+        # Return the video data
+        title, description, transcript = video_data
         return jsonify({
-            'message': 'Video summarized successfully!',
-            'summary': summary,
             'title': title,
-            'description': description
+            'description': description,
+            'transcript': transcript
         })
     except Exception as e:
         logging.error(f"Error processing YouTube link: {e}")
-        return jsonify({'error': str(e)}), 400
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/ask_question', methods=['POST'])
 @login_required
 def ask_question():
     try:
         data = request.get_json()
+        logging.debug(f"Request payload: {data}")
+
         youtube_link = data.get('youtube_url')
         question = data.get('question')
         session_id = data.get('session_id')
@@ -339,6 +328,7 @@ def ask_question():
         image_analysis = data.get('image_analysis')
 
         if not question:
+            logging.error("Question not provided.")
             return jsonify({'error': 'Question not provided.'}), 400
 
         # Build the context dynamically
@@ -346,12 +336,17 @@ def ask_question():
         if youtube_link:
             video_id = extract_video_id(youtube_link)
             if not video_id:
+                logging.error(f"Invalid YouTube URL: {youtube_link}")
                 return jsonify({'error': 'Invalid YouTube URL provided.'}), 400
+            
             video_data = get_video_data(video_id)
-            if video_data:
+            if video_data and len(video_data) == 3:
                 context += f"Video Title: {video_data[0]}\n"
                 context += f"Video Description: {video_data[1]}\n"
                 context += f"Transcript: {video_data[2]}\n"
+            else:
+                logging.error(f"Video data not found for video_id: {video_id}")
+                return jsonify({'error': 'Video data not available.'}), 400
 
         if file_summary:
             context += f"File Summary: {file_summary}\n"
@@ -361,6 +356,7 @@ def ask_question():
             context += f"Image Analysis: {image_analysis}\n"
 
         if not context:
+            logging.error("No context available for the question.")
             return jsonify({'error': 'No context available for the question.'}), 400
 
         # Create a new session if none exists
@@ -375,23 +371,21 @@ def ask_question():
         save_message(session_id, question, is_user=True)
 
         # Generate AI response
-        ai_response = get_openai_response(question, context)
+        try:
+            ai_response = get_openai_response(question, context)
+        except Exception as e:
+            logging.error(f"Error generating OpenAI response: {e}")
+            return jsonify({'error': 'Failed to generate AI response.'}), 500
 
         # Save the AI response
         save_message(session_id, ai_response, is_user=False)
 
-        # Dynamically update title and description
-        title, description = get_dynamic_title_and_description(question, ai_response)
-        chat_session = ChatSession.query.get(session_id)
-        chat_session.title = title
-        chat_session.description = description
-        db.session.commit()
-
         return jsonify({'response': ai_response, 'session_id': session_id})
 
     except Exception as e:
-        logging.error(f"Error asking question: {e}")
-        return jsonify({'error': str(e)}), 500
+        logging.error(f"Unexpected error in ask_question: {e}")
+        return jsonify({'error': 'An unexpected error occurred.'}), 500
+
 
 # Main route to render the interface
 @app.route('/')
