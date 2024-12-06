@@ -1,14 +1,10 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session, send_file
+from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session
 from flask_login import login_required, LoginManager, UserMixin, logout_user, current_user
 from googleapiclient.discovery import build
 from youtube_transcript_api import YouTubeTranscriptApi
-from PIL import Image
 import openai
-import uuid
 import asyncio
-import pytesseract
 import pyttsx3
-import requests
 from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
 import os
@@ -17,6 +13,7 @@ import logging
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 from werkzeug.utils import secure_filename
+import pytesseract
 
 
 load_dotenv()
@@ -123,23 +120,7 @@ class ChatMessage(db.Model):
 # Create the database
 with app.app_context():
     db.create_all()
-    
-def generate_image(prompt, size="1024x1024"):
-    response = openai.Image.create(
-        prompt=prompt,
-        n=1,
-        size=size
-    )
-    # Get the URL of the generated image
-    image_url = response['data'][0]['url']
-    return image_url
 
-# Save the image locally if needed
-def save_image_from_url(image_url, save_path):
-    image_data = requests.get(image_url).content
-    with open(save_path, 'wb') as image_file:
-        image_file.write(image_data)
-    
 
 def create_chat_session(user_id, title, description):
     chat_session = ChatSession(
@@ -239,7 +220,7 @@ def get_openai_response(prompt, video_data, generate_summary=False):
     ]
 
     response = openai.ChatCompletion.create(
-        model="gpt-4",
+        model="gpt-4o",
         messages=messages,
         temperature=0.7
     )
@@ -254,7 +235,7 @@ def get_openai_response(prompt, video_data, generate_summary=False):
         messages.append({"role": "user", "content": summary_prompt})
         
         summary_response = openai.ChatCompletion.create(
-            model="gpt-4",
+            model="gpt-4o",
             messages=messages,
             temperature=0.7
         )
@@ -264,11 +245,11 @@ def get_openai_response(prompt, video_data, generate_summary=False):
     
     return ai_response
 
-def get_dynamic_title_and_description(question, ai_response):
-    # Combine question and response to create a summary
-    title = question if len(question) < 50 else question[:47] + "..."
-    description = ai_response if len(ai_response) < 150 else ai_response[:147] + "..."
-    return title, description
+# def get_dynamic_title_and_description(question, ai_response):
+   # Combine question and response to create a summary
+#     title = question if len(question) < 50 else question[:47] + "..."
+#     description = ai_response if len(ai_response) < 150 else ai_response[:147] + "..."
+#     return title, description
 
 # Function to retrieve a user by ID
 def get_user_by_id(user_id):
@@ -293,7 +274,6 @@ def text_to_speech_route():
     # Return the path of the saved audio file
     return jsonify({'audio_file': AUDIO_FILE_PATH})
 
-
 @app.route('/process_youtube_link', methods=['POST'])
 @login_required
 def process_youtube_link():
@@ -305,10 +285,11 @@ def process_youtube_link():
         if not video_id:
             return jsonify({'error': 'Invalid YouTube URL provided.'}), 400
 
+        # Check if summary already exists for this user
         existing_summary = YoutubeSummary.query.filter_by(video_id=video_id, user_id=current_user.id).first()
         if existing_summary:
             return jsonify({
-                'message': 'Summary already exists in the database.',
+                'message': 'Summary already exists.',
                 'summary': existing_summary.summary,
                 'title': existing_summary.title,
                 'description': existing_summary.description
@@ -319,9 +300,7 @@ def process_youtube_link():
         summary_prompt = f"Summarize this YouTube video transcript:\n\n{transcript}\n\nSummary:"
         response = openai.ChatCompletion.create(
             model="gpt-4",
-            messages=[
-                {"role": "user", "content": summary_prompt}
-            ]
+            messages=[{"role": "user", "content": summary_prompt}]
         )
         summary = response['choices'][0]['message']['content']
 
@@ -347,40 +326,44 @@ def process_youtube_link():
         logging.error(f"Error processing YouTube link: {e}")
         return jsonify({'error': str(e)}), 400
 
-
 @app.route('/ask_question', methods=['POST'])
 @login_required
 def ask_question():
     try:
         data = request.get_json()
-        youtube_link = data.get('youtube_url')  # This will be None for file-based or image-based questions
+        youtube_link = data.get('youtube_url')
         question = data.get('question')
-        session_id = data.get('session_id')  # Get session ID if provided
-        image_based = data.get('image_based', False)  # Flag to handle image-based questions
-        image_prompt = data.get('image_prompt', '')  # Prompt for image generation
+        session_id = data.get('session_id')
+        file_summary = data.get('file_summary')
+        code_explanation = data.get('code_explanation')
+        image_analysis = data.get('image_analysis')
 
-        if not question and not image_based:
-            return jsonify({'error': 'Question or image prompt must be provided.'}), 400
+        if not question:
+            return jsonify({'error': 'Question not provided.'}), 400
 
-        video_data = None
-
+        # Build the context dynamically
+        context = ""
         if youtube_link:
-            # Handle YouTube-based questions
             video_id = extract_video_id(youtube_link)
             if not video_id:
                 return jsonify({'error': 'Invalid YouTube URL provided.'}), 400
             video_data = get_video_data(video_id)
-        else:
-            # Handle file-based questions
-            file_summary = session.get('fileSummary')  # Use Flask session to store file summary
-            if not file_summary and not image_based:
-                return jsonify({'error': 'No file summary found. Please upload a file or provide a YouTube link.'}), 400
-            video_data = ("Uploaded File", "File summary", file_summary)
+            if video_data:
+                context += f"Video Title: {video_data[0]}\n"
+                context += f"Video Description: {video_data[1]}\n"
+                context += f"Transcript: {video_data[2]}\n"
 
-        if not video_data and not image_based:
-            return jsonify({'error': 'Content not found.'}), 404
+        if file_summary:
+            context += f"File Summary: {file_summary}\n"
+        if code_explanation:
+            context += f"Code Explanation: {code_explanation}\n"
+        if image_analysis:
+            context += f"Image Analysis: {image_analysis}\n"
 
-        # Create a new session if one does not exist
+        if not context:
+            return jsonify({'error': 'No context available for the question.'}), 400
+
+        # Create a new session if none exists
         if not session_id:
             session_id = create_chat_session(
                 user_id=current_user.id,
@@ -389,48 +372,25 @@ def ask_question():
             )
 
         # Save the user question
-        if question:
-            save_message(session_id, question, is_user=True)
+        save_message(session_id, question, is_user=True)
 
-        if image_based and image_prompt:
-            # Generate an image using OpenAI's DALL-E API
-            response = openai.Image.create(
-                prompt=image_prompt,
-                n=1,
-                size='1024x1024'
-            )
-            image_url = response['data'][0]['url']
+        # Generate AI response
+        ai_response = get_openai_response(question, context)
 
-            # Download the image and save it locally
-            image_path = os.path.join(app.config['UPLOAD_FOLDER'], f"{uuid.uuid4()}.png")
-            image_data = requests.get(image_url).content
-            with open(image_path, 'wb') as f:
-                f.write(image_data)
+        # Save the AI response
+        save_message(session_id, ai_response, is_user=False)
 
-            # Save the generated image reference to the chat session
-            save_message(session_id, f"Generated Image: {image_path}", is_user=False)
+        # Dynamically update title and description
+        title, description = get_dynamic_title_and_description(question, ai_response)
+        chat_session = ChatSession.query.get(session_id)
+        chat_session.title = title
+        chat_session.description = description
+        db.session.commit()
 
-            # Return the generated image as a response
-            return send_file(image_path, mimetype='image/png')
-
-        # Generate AI response for text-based or YouTube questions
-        if question:
-            ai_response = get_openai_response(question, video_data)
-            save_message(session_id, ai_response, is_user=False)
-
-            # Dynamically generate and update title and description
-            title, description = get_dynamic_title_and_description(question, ai_response)
-            chat_session = ChatSession.query.get(session_id)
-            chat_session.title = title
-            chat_session.description = description
-            db.session.commit()
-
-            return jsonify({'response': ai_response, 'session_id': session_id})
-
-        return jsonify({'error': 'Invalid request. No valid question or image prompt provided.'}), 400
+        return jsonify({'response': ai_response, 'session_id': session_id})
 
     except Exception as e:
-        logging.error(f"Error in ask_question: {e}")
+        logging.error(f"Error asking question: {e}")
         return jsonify({'error': str(e)}), 500
 
 # Main route to render the interface
@@ -727,7 +687,7 @@ def upload_file():
             # Summarize the content
             summary_prompt = f"Summarize the following text:\n{text_content}\n\nSummary:"
             response = openai.ChatCompletion.create(
-                model="gpt-4o",
+                model="gpt-4",
                 messages=[
                     {"role": "user", "content": summary_prompt}
                 ]
@@ -762,7 +722,6 @@ def summarize_code():
 
         # Summarize and explain the code
         prompt = f"Explain this code:\n{code_block}\n\nExplanation:"
-
         response = openai.ChatCompletion.create(
             model="gpt-4",
             messages=[
@@ -784,57 +743,6 @@ def summarize_code():
     except Exception as e:
         logging.error(f"Error summarizing code: {e}")
         return jsonify({'error': 'Failed to summarize the code.'}), 500
-    
-@app.route('/analyze-image', methods=['POST'])
-@login_required
-def analyze_image():
-    if 'image' not in request.files:
-        return jsonify({'error': 'No image uploaded.'}), 400
-
-    image = request.files['image']
-    if image.filename == '':
-        return jsonify({'error': 'No file selected.'}), 400
-
-    try:
-        # Save the image temporarily
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(image.filename))
-        image.save(filepath)
-
-        # Extract text from the image using Tesseract
-        extracted_text = pytesseract.image_to_string(Image.open(filepath))
-
-        # Generate analysis using OpenAI
-        analysis_prompt = f"Analyze the following text extracted from an image:\n{extracted_text}\n\nAnalysis:"
-        messages = [
-            {"role": "system", "content": "You are an AI that analyzes images and provides insights based on extracted text or image features."},
-            {"role": "user", "content": analysis_prompt}
-        ]
-
-        response = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=[
-                {"role": "user", "content": prompt}
-            ]
-        )
-        explanation = response['choices'][0]['message']['content']
-
-        # Save to database
-        new_code_analysis = CodeAnalysis(
-            code=code_block,
-            explanation=explanation,
-            user_id=current_user.id
-        )
-        db.session.add(new_code_analysis)
-        db.session.commit()
-
-        return jsonify({'explanation': explanation})
-
-        analysis = response['choices'][0]['message']['content']
-
-        return jsonify({'analysis': analysis})
-    except Exception as e:
-        logging.error(f"Error analyzing image: {e}")
-        return jsonify({'error': 'Failed to analyze the image.'}), 500
 
     
 @app.route('/analyze-image', methods=['POST'])
@@ -851,7 +759,7 @@ def analyze_image():
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(image.filename))
         image.save(filepath)
 
-        extracted_text = pytesseract.image_to_string(Image.open(filepath))
+        extracted_text = pytesseract.image_to_string(image.open(filepath))
 
         # Generate analysis
         prompt = f"Analyze this extracted text:\n{extracted_text}\n\nAnalysis:"
@@ -878,145 +786,6 @@ def analyze_image():
         logging.error(f"Error analyzing image: {e}")
         return jsonify({'error': 'Failed to analyze the image.'}), 500
 
-@app.route('/get_dynamic_questions', methods=['POST'])
-@login_required
-def get_dynamic_questions():
-    try:
-        data = request.get_json()
-        youtube_link = data.get('youtube_url', None)
-        file_summary = data.get('file_summary', None)
-
-        # Generate dynamic questions based on the provided context
-        if youtube_link:
-            video_id = extract_video_id(youtube_link)
-            if not video_id:
-                return jsonify({'error': 'Invalid YouTube URL provided.'}), 400
-
-            # Fetch video data from database or external API
-            video_data = get_video_data(video_id)
-            if not video_data:
-                return jsonify({'error': 'Video not found.'}), 404
-
-            # Use AI to generate questions dynamically
-            prompt = (
-                f"Based on the video titled '{video_data[0]}', "
-                f"described as '{video_data[1]}', and its transcript: {video_data[2]}. "
-                "Generate a list of 5 insightful questions a user might ask about this content."
-            )
-        elif file_summary:
-            # Generate questions based on file summary
-            prompt = (
-                f"Based on this summarized text: {file_summary}, "
-                "generate 5 insightful questions a user might ask."
-            )
-        else:
-            return jsonify({'error': 'No context provided.'}), 400
-
-        # Get suggestions from OpenAI API
-        response = openai.ChatCompletion.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "user", "content": prompt}
-            ]
-        )
-        suggestions = response['choices'][0]['message']['content'].strip().split("\n")
-
-        # Return the list of dynamic questions
-        return jsonify({'suggestions': suggestions})
-    except Exception as e:
-        logging.error(f"Error generating dynamic questions: {e}")
-        return jsonify({'error': str(e)}), 500
-
-    
-@app.route('/analyze-image', methods=['POST'])
-@login_required
-def analyze_image():
-    if 'image' not in request.files:
-        return jsonify({'error': 'No image uploaded.'}), 400
-
-    image = request.files['image']
-    if image.filename == '':
-        return jsonify({'error': 'No file selected.'}), 400
-
-    try:
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(image.filename))
-        image.save(filepath)
-
-        extracted_text = pytesseract.image_to_string(Image.open(filepath))
-
-        # Generate analysis
-        prompt = f"Analyze this extracted text:\n{extracted_text}\n\nAnalysis:"
-        response = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=[
-                {"role": "user", "content": prompt}
-            ]
-        )
-        analysis = response['choices'][0]['message']['content']
-
-        # Save to database
-        new_image_analysis = ImageAnalysis(
-            image_path=filepath,
-            extracted_text=extracted_text,
-            analysis=analysis,
-            user_id=current_user.id
-        )
-        db.session.add(new_image_analysis)
-        db.session.commit()
-
-        return jsonify({'analysis': analysis})
-    except Exception as e:
-        logging.error(f"Error analyzing image: {e}")
-        return jsonify({'error': 'Failed to analyze the image.'}), 500
-
-@app.route('/get_dynamic_questions', methods=['POST'])
-@login_required
-def get_dynamic_questions():
-    try:
-        data = request.get_json()
-        youtube_link = data.get('youtube_url', None)
-        file_summary = data.get('file_summary', None)
-
-        # Generate dynamic questions based on the provided context
-        if youtube_link:
-            video_id = extract_video_id(youtube_link)
-            if not video_id:
-                return jsonify({'error': 'Invalid YouTube URL provided.'}), 400
-
-            # Fetch video data from database or external API
-            video_data = get_video_data(video_id)
-            if not video_data:
-                return jsonify({'error': 'Video not found.'}), 404
-
-            # Use AI to generate questions dynamically
-            prompt = (
-                f"Based on the video titled '{video_data[0]}', "
-                f"described as '{video_data[1]}', and its transcript: {video_data[2]}. "
-                "Generate a list of 5 insightful questions a user might ask about this content."
-            )
-        elif file_summary:
-            # Generate questions based on file summary
-            prompt = (
-                f"Based on this summarized text: {file_summary}, "
-                "generate 5 insightful questions a user might ask."
-            )
-        else:
-            return jsonify({'error': 'No context provided.'}), 400
-
-        # Get suggestions from OpenAI API
-        response = openai.ChatCompletion.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "user", "content": prompt}
-            ]
-        )
-        suggestions = response['choices'][0]['message']['content'].strip().split("\n")
-
-        # Return the list of dynamic questions
-        return jsonify({'suggestions': suggestions})
-    except Exception as e:
-        logging.error(f"Error generating dynamic questions: {e}")
-        return jsonify({'error': str(e)}), 500
 
 
 if __name__ == '__main__':

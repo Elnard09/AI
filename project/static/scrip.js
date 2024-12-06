@@ -14,6 +14,7 @@ document.addEventListener("DOMContentLoaded", function() {
     initializeFileUpload(); 
     handleCodeAnalyzer();
     handleImageAnalyzer();
+    handleVideoSummarizer();
 });
 
 function initializePage() {
@@ -273,7 +274,7 @@ function initializeChatAI() {
     });
 }
 
-function askQuestion(question, youtubeUrl, sessionId = null) {
+function askQuestion(question, youtubeUrl = null, sessionId = null) {
     const submitBtn = document.getElementById('chat-submit-btn');
     const loadingDiv = document.createElement('div');
     loadingDiv.id = 'loading-message';
@@ -291,16 +292,28 @@ function askQuestion(question, youtubeUrl, sessionId = null) {
     submitBtn.disabled = true;
     submitBtn.textContent = 'Processing...';
 
+    // Fetch additional context from sessionStorage
+    const fileSummary = sessionStorage.getItem('fileSummary');
+    const codeExplanation = sessionStorage.getItem('codeExplanation');
+    const imageAnalysis = sessionStorage.getItem('imageAnalysis');
+
+    // Prepare the data to send to the backend
+    const requestData = {
+        youtube_url: youtubeUrl,
+        question: question,
+        session_id: sessionId,
+        file_summary: fileSummary,
+        code_explanation: codeExplanation,
+        image_analysis: imageAnalysis,
+    };
+
+    // Make the request to the backend
     fetch('/ask_question', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-            youtube_url: youtubeUrl,
-            question: question,
-            session_id: sessionId,
-        }),
+        body: JSON.stringify(requestData),
     })
     .then(response => response.json())
     .then(data => {
@@ -313,17 +326,20 @@ function askQuestion(question, youtubeUrl, sessionId = null) {
             sessionStorage.setItem('currentSessionId', data.session_id);
         }
 
-        displayAIResponse(data.response);
+        // Display the AI's response
+        displayAIResponse(data.response || 'No response available.');
     })
     .catch(error => {
         console.error('Error:', error);
         showError(error.message || 'An error occurred. Please try again.');
     })
     .finally(() => {
+        // Re-enable the submit button and remove the loading message
         submitBtn.disabled = false;
         submitBtn.textContent = 'Send';
-        if (document.getElementById('loading-message')) {
-            document.getElementById('loading-message').remove();
+        const loadingElement = document.getElementById('loading-message');
+        if (loadingElement) {
+            loadingElement.remove();
         }
     });
 }
@@ -619,19 +635,7 @@ function initializeFileUpload() {
             const formData = new FormData();
             formData.append("file", file);
 
-            // Show loading message
-            const loadingDiv = document.createElement("div");
-            loadingDiv.id = "loading-message";
-            loadingDiv.textContent = "Uploading file and processing summary...";
-            loadingDiv.style.color = "white";
-            loadingDiv.style.backgroundColor = "rgba(0, 0, 0, 0.7)";
-            loadingDiv.style.padding = "20px";
-            loadingDiv.style.position = "fixed";
-            loadingDiv.style.top = "50%";
-            loadingDiv.style.left = "50%";
-            loadingDiv.style.transform = "translate(-50%, -50%)";
-            loadingDiv.style.borderRadius = "5px";
-            document.body.appendChild(loadingDiv);
+            showLoadingMessage("Uploading file and processing summary...");
 
             try {
                 const response = await fetch("/upload-file", {
@@ -641,9 +645,7 @@ function initializeFileUpload() {
 
                 const data = await response.json();
                 if (response.ok) {
-                    // Store AI message for the file
-                    sessionStorage.setItem("aiMessage", "You can now ask questions based on the summarized file.");
-                    // Redirect to chatAI.html
+                    sessionStorage.setItem("fileSummary", data.summary);
                     window.location.href = "/chatAI";
                 } else {
                     throw new Error(data.error || "Failed to process the file.");
@@ -652,10 +654,7 @@ function initializeFileUpload() {
                 console.error("Error:", error);
                 showError(error.message || "An error occurred. Please try again.");
             } finally {
-                // Remove loading message
-                if (document.getElementById("loading-message")) {
-                    document.getElementById("loading-message").remove();
-                }
+                removeLoadingMessage();
             }
         });
     }
@@ -664,6 +663,48 @@ function initializeFileUpload() {
 // ===============================
 // Function to Handle Code Analyzer
 // ===============================
+function handleVideoSummarizer() {
+    const submitBtn = document.getElementById('submit-chat-ai-button');
+    const userInput = document.getElementById('user-chat-ai-input');
+
+    if (submitBtn && userInput) {
+        submitBtn.addEventListener("click", async () => {
+            const youtubeUrl = userInput.value.trim();
+            if (!youtubeUrl) {
+                showError("Please enter a YouTube URL.");
+                return;
+            }
+            if (!isValidYoutubeUrl(youtubeUrl)) {
+                showError("Please enter a valid YouTube URL.");
+                return;
+            }
+
+            showLoadingMessage("Processing video... This may take a few minutes.");
+
+            try {
+                const response = await fetch("/process_youtube_link", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ youtube_url: youtubeUrl }),
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    sessionStorage.setItem("youtubeLink", youtubeUrl);
+                    window.location.href = "/chatAI";
+                } else {
+                    throw new Error(data.error || "Failed to process the video.");
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                showError(error.message || "An error occurred. Please try again.");
+            } finally {
+                removeLoadingMessage();
+            }
+        });
+    }
+}
+
 function handleCodeAnalyzer() {
     const codeSubmitBtn = document.getElementById("submit-chat-ai-button-code");
     const codeInputField = document.getElementById("code-creator-input");
@@ -672,7 +713,7 @@ function handleCodeAnalyzer() {
         codeSubmitBtn.addEventListener("click", async () => {
             const codeBlock = codeInputField.value.trim();
             if (!codeBlock) {
-                alert("Please enter a code block.");
+                showError("Please enter a code block.");
                 return;
             }
 
@@ -686,16 +727,14 @@ function handleCodeAnalyzer() {
                 });
 
                 const data = await response.json();
-
                 if (response.ok) {
-                    sessionStorage.setItem("aiMessage", data.explanation);
+                    sessionStorage.setItem("codeExplanation", data.explanation);
                     window.location.href = "/chatAI";
                 } else {
-                    alert(data.error || "Failed to analyze the code.");
+                    throw new Error(data.error || "Failed to analyze the code.");
                 }
             } catch (error) {
-                console.error("Error:", error);
-                alert("An error occurred while analyzing the code.");
+                showError(error.message || "An error occurred. Please try again.");
             } finally {
                 removeLoadingMessage();
             }
