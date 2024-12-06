@@ -762,6 +762,7 @@ def summarize_code():
 
         # Summarize and explain the code
         prompt = f"Explain this code:\n{code_block}\n\nExplanation:"
+
         response = openai.ChatCompletion.create(
             model="gpt-4",
             messages=[
@@ -783,6 +784,148 @@ def summarize_code():
     except Exception as e:
         logging.error(f"Error summarizing code: {e}")
         return jsonify({'error': 'Failed to summarize the code.'}), 500
+    
+@app.route('/analyze-image', methods=['POST'])
+@login_required
+def analyze_image():
+    if 'image' not in request.files:
+        return jsonify({'error': 'No image uploaded.'}), 400
+
+    image = request.files['image']
+    if image.filename == '':
+        return jsonify({'error': 'No file selected.'}), 400
+
+    try:
+        # Save the image temporarily
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(image.filename))
+        image.save(filepath)
+
+        # Extract text from the image using Tesseract
+        extracted_text = pytesseract.image_to_string(Image.open(filepath))
+
+        # Generate analysis using OpenAI
+        analysis_prompt = f"Analyze the following text extracted from an image:\n{extracted_text}\n\nAnalysis:"
+        messages = [
+            {"role": "system", "content": "You are an AI that analyzes images and provides insights based on extracted text or image features."},
+            {"role": "user", "content": analysis_prompt}
+        ]
+
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[
+                {"role": "user", "content": prompt}
+            ]
+        )
+        explanation = response['choices'][0]['message']['content']
+
+        # Save to database
+        new_code_analysis = CodeAnalysis(
+            code=code_block,
+            explanation=explanation,
+            user_id=current_user.id
+        )
+        db.session.add(new_code_analysis)
+        db.session.commit()
+
+        return jsonify({'explanation': explanation})
+
+        analysis = response['choices'][0]['message']['content']
+
+        return jsonify({'analysis': analysis})
+    except Exception as e:
+        logging.error(f"Error analyzing image: {e}")
+        return jsonify({'error': 'Failed to analyze the image.'}), 500
+
+    
+@app.route('/analyze-image', methods=['POST'])
+@login_required
+def analyze_image():
+    if 'image' not in request.files:
+        return jsonify({'error': 'No image uploaded.'}), 400
+
+    image = request.files['image']
+    if image.filename == '':
+        return jsonify({'error': 'No file selected.'}), 400
+
+    try:
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(image.filename))
+        image.save(filepath)
+
+        extracted_text = pytesseract.image_to_string(Image.open(filepath))
+
+        # Generate analysis
+        prompt = f"Analyze this extracted text:\n{extracted_text}\n\nAnalysis:"
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[
+                {"role": "user", "content": prompt}
+            ]
+        )
+        analysis = response['choices'][0]['message']['content']
+
+        # Save to database
+        new_image_analysis = ImageAnalysis(
+            image_path=filepath,
+            extracted_text=extracted_text,
+            analysis=analysis,
+            user_id=current_user.id
+        )
+        db.session.add(new_image_analysis)
+        db.session.commit()
+
+        return jsonify({'analysis': analysis})
+    except Exception as e:
+        logging.error(f"Error analyzing image: {e}")
+        return jsonify({'error': 'Failed to analyze the image.'}), 500
+
+@app.route('/get_dynamic_questions', methods=['POST'])
+@login_required
+def get_dynamic_questions():
+    try:
+        data = request.get_json()
+        youtube_link = data.get('youtube_url', None)
+        file_summary = data.get('file_summary', None)
+
+        # Generate dynamic questions based on the provided context
+        if youtube_link:
+            video_id = extract_video_id(youtube_link)
+            if not video_id:
+                return jsonify({'error': 'Invalid YouTube URL provided.'}), 400
+
+            # Fetch video data from database or external API
+            video_data = get_video_data(video_id)
+            if not video_data:
+                return jsonify({'error': 'Video not found.'}), 404
+
+            # Use AI to generate questions dynamically
+            prompt = (
+                f"Based on the video titled '{video_data[0]}', "
+                f"described as '{video_data[1]}', and its transcript: {video_data[2]}. "
+                "Generate a list of 5 insightful questions a user might ask about this content."
+            )
+        elif file_summary:
+            # Generate questions based on file summary
+            prompt = (
+                f"Based on this summarized text: {file_summary}, "
+                "generate 5 insightful questions a user might ask."
+            )
+        else:
+            return jsonify({'error': 'No context provided.'}), 400
+
+        # Get suggestions from OpenAI API
+        response = openai.ChatCompletion.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "user", "content": prompt}
+            ]
+        )
+        suggestions = response['choices'][0]['message']['content'].strip().split("\n")
+
+        # Return the list of dynamic questions
+        return jsonify({'suggestions': suggestions})
+    except Exception as e:
+        logging.error(f"Error generating dynamic questions: {e}")
+        return jsonify({'error': str(e)}), 500
 
     
 @app.route('/analyze-image', methods=['POST'])
