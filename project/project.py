@@ -60,6 +60,26 @@ class YouTubeVideo(db.Model):
     description = db.Column(db.Text, nullable=False)
     transcript = db.Column(db.Text, nullable=False)
 
+class FileSummary(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    session_id = db.Column(db.Integer, db.ForeignKey('chat_session.id'), nullable=False)
+    summary = db.Column(db.Text, nullable=False)
+
+# CodeSummary model to store summarized code analysis
+class CodeSummary(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    session_id = db.Column(db.Integer, db.ForeignKey('chat_session.id'), nullable=False)
+    summary = db.Column(db.Text, nullable=False)
+    chat_session = db.relationship('ChatSession', backref='code_summary')
+
+# ImageAnalysis model to store analyzed image results
+class ImageAnalysis(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    session_id = db.Column(db.Integer, db.ForeignKey('chat_session.id'), nullable=False)
+    analysis = db.Column(db.Text, nullable=False)
+    chat_session = db.relationship('ChatSession', backref='image_analysis')
+
+
 # User model with no changes
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
@@ -76,7 +96,7 @@ class ChatSession(db.Model):
     date = db.Column(db.DateTime, nullable=False)
     title = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text, nullable=False)
-
+    file_summary = db.relationship('FileSummary', backref='session', lazy=True)
 
 # ChatMessage references ChatSession via foreign key
 class ChatMessage(db.Model):
@@ -184,9 +204,15 @@ def save_video_to_db(video_id, title, description, transcript):
 # Retrieve video data from the database
 def get_video_data(video_id):
     video = YouTubeVideo.query.filter_by(video_id=video_id).first()
+    print("Video Data:", video)  # Debugging line
     if video:
-        return video.title, video.description, video.transcript
+        return f"Video Title: {video.title}\nDescription: {video.description}\nTranscript: {video.transcript}"
     return None
+
+def save_file_summary_to_db(session_id, summary):
+    file_summary = FileSummary(session_id=session_id, summary=summary)
+    db.session.add(file_summary)
+    db.session.commit()
 
 # Function to interact with OpenAI and get both a response and a session summary
 def get_openai_response(prompt, video_data, generate_summary=False):
@@ -205,7 +231,7 @@ def get_openai_response(prompt, video_data, generate_summary=False):
     ]
 
     response = openai.ChatCompletion.create(
-        model="gpt-4",
+        model="gpt-4o",
         messages=messages,
         temperature=0.7
     )
@@ -220,7 +246,7 @@ def get_openai_response(prompt, video_data, generate_summary=False):
         messages.append({"role": "user", "content": summary_prompt})
         
         summary_response = openai.ChatCompletion.create(
-            model="gpt-4",
+            model="gpt-4o",
             messages=messages,
             temperature=0.7
         )
@@ -259,13 +285,9 @@ def text_to_speech_route():
     # Return the path of the saved audio file
     return jsonify({'audio_file': AUDIO_FILE_PATH})
 
-
 @app.route('/process_youtube_link', methods=['POST'])
 def process_youtube_link():
     try:
-        # Clear the current session ID when a new link is processed
-        session.pop('current_session_id', None)
-
         data = request.get_json()
         youtube_link = data['youtube_url']
         video_id = extract_video_id(youtube_link)
@@ -276,111 +298,79 @@ def process_youtube_link():
         # Check if video is in the database
         video_data = get_video_data(video_id)
         if not video_data:
-            # Get video info and transcript if not found in database
+            # If video is not found in the database, fetch the video info and transcript
             title, description, transcript = get_video_info_and_transcript(video_id)
 
-            # Check if the video already exists before saving
-            existing_video = YouTubeVideo.query.filter_by(video_id=video_id).first()
-            if existing_video:
-                return jsonify({'message': 'Video already exists in the database.', 'transcript': transcript})
-
-            # Save video to database
+            # Save video to the database
             save_video_to_db(video_id, title, description, transcript)
             video_data = (title, description, transcript)
         else:
             title, description, transcript = video_data
 
-        # Return the transcript immediately after processing the link
+        # Return the transcript after processing
         return jsonify({
             'message': 'Video processed successfully!',
             'transcript': transcript,
             'title': title,
-            'description': description
+            'description': description,
+            'content_type': 'video'
         })
     except Exception as e:
         logging.error(f"Error processing YouTube link: {e}")
         return jsonify({'error': str(e)}), 400
-
+    
 @app.route('/ask_question', methods=['POST'])
 @login_required
 def ask_question():
     try:
         data = request.get_json()
-        youtube_link = data.get('youtube_url')  # This will be None for file-based or image-based questions
         question = data.get('question')
-        session_id = data.get('session_id')  # Get session ID if provided
-        image_based = data.get('image_based', False)  # Flag to handle image-based questions
-        image_prompt = data.get('image_prompt', '')  # Prompt for image generation
+        content_type = data.get('content_type')  # 'code', 'file', 'video', 'image', etc.
+        session_id = data.get('session_id')  # Retrieve session_id for follow-up question
 
-        if not question and not image_based:
-            return jsonify({'error': 'Question or image prompt must be provided.'}), 400
+        if content_type == 'code':
+            # Retrieve code analysis by session_id
+            code_summary = CodeSummary.query.filter_by(session_id=session_id).first()
+            if not code_summary:
+                return jsonify({'error': 'No analyzed code found in the session.'}), 400
+            content_context = code_summary.summary
 
-        video_data = None
+        elif content_type == 'file':
+            # Retrieve file summary by session_id
+            file_summary = FileSummary.query.filter_by(session_id=session_id).first()
+            if not file_summary:
+                return jsonify({'error': 'No file summary found in the session.'}), 400
+            content_context = file_summary.summary
 
-        if youtube_link:
-            # Handle YouTube-based questions
-            video_id = extract_video_id(youtube_link)
-            if not video_id:
-                return jsonify({'error': 'Invalid YouTube URL provided.'}), 400
-            video_data = get_video_data(video_id)
+        elif content_type == 'video':
+            # Retrieve video data by session_id (or video_id)
+            video_data = YouTubeVideo.query.filter_by(video_id=session_id).first()
+            if not video_data:
+                return jsonify({'error': 'No video data found for the session.'}), 400
+            content_context = video_data.transcript  # Use the transcript for Q&A
+
+        elif content_type == 'image':
+            # Retrieve image analysis by session_id
+            image_analysis = ImageAnalysis.query.filter_by(session_id=session_id).first()
+            if not image_analysis:
+                return jsonify({'error': 'No image analysis found in the session.'}), 400
+            content_context = image_analysis.analysis
+
         else:
-            # Handle file-based questions
-            file_summary = session.get('fileSummary')  # Use Flask session to store file summary
-            if not file_summary and not image_based:
-                return jsonify({'error': 'No file summary found. Please upload a file or provide a YouTube link.'}), 400
-            video_data = ("Uploaded File", "File summary", file_summary)
+            return jsonify({'error': 'Invalid content type.'}), 400
 
-        if not video_data and not image_based:
-            return jsonify({'error': 'Content not found.'}), 404
+        # Generate the AI response based on the content context
+        conversation_prompt = f"Content: {content_context}\nUser's question: {question}\nAI's answer:"
 
-        # Create a new session if one does not exist
-        if not session_id:
-            session_id = create_chat_session(
-                user_id=current_user.id,
-                title="Chat with AI",
-                description="Conversation based on the summarized content."
-            )
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[{"role": "system", "content": "You are an AI assistant that answers questions based on the provided content."},
+                      {"role": "user", "content": conversation_prompt}],
+            temperature=0.7
+        )
 
-        # Save the user question
-        if question:
-            save_message(session_id, question, is_user=True)
-
-        if image_based and image_prompt:
-            # Generate an image using OpenAI's DALL-E API
-            response = openai.Image.create(
-                prompt=image_prompt,
-                n=1,
-                size='1024x1024'
-            )
-            image_url = response['data'][0]['url']
-
-            # Download the image and save it locally
-            image_path = os.path.join(app.config['UPLOAD_FOLDER'], f"{uuid.uuid4()}.png")
-            image_data = requests.get(image_url).content
-            with open(image_path, 'wb') as f:
-                f.write(image_data)
-
-            # Save the generated image reference to the chat session
-            save_message(session_id, f"Generated Image: {image_path}", is_user=False)
-
-            # Return the generated image as a response
-            return send_file(image_path, mimetype='image/png')
-
-        # Generate AI response for text-based or YouTube questions
-        if question:
-            ai_response = get_openai_response(question, video_data)
-            save_message(session_id, ai_response, is_user=False)
-
-            # Dynamically generate and update title and description
-            title, description = get_dynamic_title_and_description(question, ai_response)
-            chat_session = ChatSession.query.get(session_id)
-            chat_session.title = title
-            chat_session.description = description
-            db.session.commit()
-
-            return jsonify({'response': ai_response, 'session_id': session_id})
-
-        return jsonify({'error': 'Invalid request. No valid question or image prompt provided.'}), 400
+        ai_response = response['choices'][0]['message']['content']
+        return jsonify({'response': ai_response, 'session_id': session_id})
 
     except Exception as e:
         logging.error(f"Error in ask_question: {e}")
@@ -678,23 +668,18 @@ def upload_file():
             if not text_content:
                 return jsonify({'error': 'Failed to extract text from the file'}), 400
 
-            # Generate summary using OpenAI
-            summary_prompt = f"Summarize the following text:\n{text_content}\n\nSummary:"
-            messages = [
-                {"role": "system", "content": "You are an AI assistant that summarizes uploaded documents."},
-                {"role": "user", "content": summary_prompt}
-            ]
-            response = openai.ChatCompletion.create(
-                model="gpt-4",
-                messages=messages,
-                temperature=0.7
-            )
-            summary = response['choices'][0]['message']['content']
+            # Save the full content in the database
+            session_id = create_chat_session(user_id=current_user.id, title="File Upload", description="File uploaded for analysis.")
+            file_summary = FileSummary(session_id=session_id, summary=text_content)
+            db.session.add(file_summary)
+            db.session.commit()
 
-            # Store the summary in the session
-            session['fileSummary'] = summary
-
-            return jsonify({'summary': summary})
+            # Return the content type and AI message to the frontend
+            return jsonify({
+                'summary': text_content,
+                'content_type': 'file',
+                'aiMessage': "You can now ask questions based on the full content of the file."
+            })
 
         except Exception as e:
             logging.error(f"Error processing file: {e}")
@@ -731,11 +716,22 @@ def summarize_code():
 
         explanation = response['choices'][0]['message']['content']
 
-        return jsonify({'explanation': explanation})
+        # Store the explanation in the database (or session if needed)
+        session_id = create_chat_session(user_id=current_user.id, title="Code Analysis", description="Code uploaded and analyzed.")
+        code_summary = CodeSummary(session_id=session_id, summary=explanation)
+        db.session.add(code_summary)
+        db.session.commit()
+
+        # Respond with the explanation and content type
+        return jsonify({
+            'explanation': explanation,
+            'content_type': 'code',
+            'aiMessage': 'You can now ask questions based on the analyzed code.'
+        })
     except Exception as e:
         logging.error(f"Error summarizing code: {e}")
         return jsonify({'error': 'Failed to summarize the code.'}), 500
-    
+
 @app.route('/analyze-image', methods=['POST'])
 @login_required
 def analyze_image():
@@ -762,18 +758,18 @@ def analyze_image():
         ]
 
         response = openai.ChatCompletion.create(
-            model="gpt-4",
+            model="gpt-4o",
             messages=messages,
             temperature=0.7
         )
 
         analysis = response['choices'][0]['message']['content']
 
-        return jsonify({'analysis': analysis})
+        # Return the analysis to the frontend
+        return jsonify({'analysis': analysis, 'content_type': 'image'})
     except Exception as e:
         logging.error(f"Error analyzing image: {e}")
         return jsonify({'error': 'Failed to analyze the image.'}), 500
-
-
+    
 if __name__ == '__main__':
     app.run(debug=True)
