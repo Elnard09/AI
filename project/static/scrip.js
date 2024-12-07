@@ -533,7 +533,7 @@ function initializeFileUpload() {
             const formData = new FormData();
             formData.append("file", file);
 
-            const loadingDiv = createLoadingMessage("Uploading file and processing summary...");
+            const loadingDiv = createLoadingMessage("Analyzing code... This may take a few seconds.");
             document.body.appendChild(loadingDiv);
 
             try {
@@ -582,7 +582,7 @@ function handleCodeAnalyzer() {
                 return;
             }
 
-            const loadingDiv = createLoadingMessage("Analyzing code... Please wait.");
+            const loadingDiv = createLoadingMessage("Analyzing file... This may take a few seconds.");
             document.body.appendChild(loadingDiv);
 
             try {
@@ -1032,7 +1032,7 @@ function removeLoadingMessage(loadingDiv) {
 // For video summarizer
 function summarizeVideo(youtubeUrl) {
     const submitBtn = document.getElementById('submit-chat-ai-button');
-    const loadingDiv = createLoadingMessage('Processing video... This may take a few minutes.');
+    const loadingDiv = createLoadingMessage('Processing video... This may take a few seconds.');
     document.body.appendChild(loadingDiv);
     
     submitBtn.disabled = true;

@@ -333,7 +333,7 @@ def ask_question():
             code_summary = CodeSummary.query.filter_by(session_id=session_id).first()
             if not code_summary:
                 return jsonify({'error': 'No analyzed code found in the session.'}), 400
-            content_context = code_summary.summary
+            content_context = code_summary.summary  # Use the full code stored in the database
 
         elif content_type == 'file':
             # Retrieve file summary by session_id
@@ -716,9 +716,9 @@ def summarize_code():
 
         explanation = response['choices'][0]['message']['content']
 
-        # Store the explanation in the database (or session if needed)
+        # Save the full code in the database instead of the summarized version
         session_id = create_chat_session(user_id=current_user.id, title="Code Analysis", description="Code uploaded and analyzed.")
-        code_summary = CodeSummary(session_id=session_id, summary=explanation)
+        code_summary = CodeSummary(session_id=session_id, summary=code_block)  # Save full code in the 'summary' column
         db.session.add(code_summary)
         db.session.commit()
 
