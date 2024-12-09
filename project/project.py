@@ -60,6 +60,15 @@ class YouTubeVideo(db.Model):
     description = db.Column(db.Text, nullable=False)
     transcript = db.Column(db.Text, nullable=False)
 
+class ImageSummary(db.Model):
+    __tablename__ = 'image_summaries'
+
+    id = db.Column(db.Integer, primary_key=True)
+    session_id = db.Column(db.String, nullable=False)
+    summary = db.Column(db.Text, nullable=False)
+
+    def __repr__(self):
+        return f"<ImageSummary session_id={self.session_id}>"
 class FileSummary(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     session_id = db.Column(db.Integer, db.ForeignKey('chat_session.id'), nullable=False)
@@ -97,6 +106,7 @@ class ChatSession(db.Model):
     title = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text, nullable=False)
     file_summary = db.relationship('FileSummary', backref='session', lazy=True)
+    video_id = db.Column(db.String(100), nullable=True) 
 
 # ChatMessage references ChatSession via foreign key
 class ChatMessage(db.Model):
@@ -127,12 +137,13 @@ def save_image_from_url(image_url, save_path):
         image_file.write(image_data)
     
 
-def create_chat_session(user_id, title, description):
+def create_chat_session(user_id, title, description, video_id = None):
     chat_session = ChatSession(
         user_id=user_id,  # Associate the session with the user
         date=datetime.utcnow(),
         title=title,
-        description=description
+        description=description,
+        video_id = video_id
     )
     db.session.add(chat_session)
     db.session.commit()
@@ -204,10 +215,10 @@ def save_video_to_db(video_id, title, description, transcript):
 # Retrieve video data from the database
 def get_video_data(video_id):
     video = YouTubeVideo.query.filter_by(video_id=video_id).first()
-    print("Video Data:", video)  # Debugging line
     if video:
-        return f"Video Title: {video.title}\nDescription: {video.description}\nTranscript: {video.transcript}"
+        return video.title, video.description, video.transcript  # Return as a tuple
     return None
+
 
 def save_file_summary_to_db(session_id, summary):
     file_summary = FileSummary(session_id=session_id, summary=summary)
@@ -286,6 +297,7 @@ def text_to_speech_route():
     return jsonify({'audio_file': AUDIO_FILE_PATH})
 
 @app.route('/process_youtube_link', methods=['POST'])
+@login_required
 def process_youtube_link():
     try:
         data = request.get_json()
@@ -297,15 +309,17 @@ def process_youtube_link():
 
         # Check if video is in the database
         video_data = get_video_data(video_id)
-        if not video_data:
+        if video_data:
+            title, description, transcript = video_data
+        else:
             # If video is not found in the database, fetch the video info and transcript
             title, description, transcript = get_video_info_and_transcript(video_id)
 
             # Save video to the database
             save_video_to_db(video_id, title, description, transcript)
-            video_data = (title, description, transcript)
-        else:
-            title, description, transcript = video_data
+
+        # Create a chat session with the video_id
+        session_id = create_chat_session(user_id=current_user.id, title=title, description=description, video_id=video_id)
 
         # Return the transcript after processing
         return jsonify({
@@ -313,11 +327,14 @@ def process_youtube_link():
             'transcript': transcript,
             'title': title,
             'description': description,
-            'content_type': 'video'
+            'content_type': 'video',
+            'session_id': session_id
         })
+
     except Exception as e:
         logging.error(f"Error processing YouTube link: {e}")
         return jsonify({'error': str(e)}), 400
+
     
 @app.route('/ask_question', methods=['POST'])
 @login_required
@@ -328,44 +345,48 @@ def ask_question():
         content_type = data.get('content_type')  # 'code', 'file', 'video', 'image', etc.
         session_id = data.get('session_id')  # Retrieve session_id for follow-up question
 
+        error_message = f"No analyzed {content_type} found in the session."
+
         if content_type == 'code':
-            # Retrieve code analysis by session_id
             code_summary = CodeSummary.query.filter_by(session_id=session_id).first()
             if not code_summary:
-                return jsonify({'error': 'No analyzed code found in the session.'}), 400
-            content_context = code_summary.summary  # Use the full code stored in the database
+                return jsonify({'error': error_message}), 400
+            content_context = code_summary.summary
 
         elif content_type == 'file':
-            # Retrieve file summary by session_id
             file_summary = FileSummary.query.filter_by(session_id=session_id).first()
             if not file_summary:
-                return jsonify({'error': 'No file summary found in the session.'}), 400
+                return jsonify({'error': error_message}), 400
             content_context = file_summary.summary
 
         elif content_type == 'video':
-            # Retrieve video data by session_id (or video_id)
+            chat_session = db.session.get(ChatSession, session_id)
+            if not chat_session or not chat_session.video_id:
+                return jsonify({'error': 'No associated video found for this session.'}), 400
+
             video_data = YouTubeVideo.query.filter_by(video_id=session_id).first()
             if not video_data:
-                return jsonify({'error': 'No video data found for the session.'}), 400
-            content_context = video_data.transcript  # Use the transcript for Q&A
+                return jsonify({'error': error_message}), 400
+            content_context = video_data.transcript
 
         elif content_type == 'image':
-            # Retrieve image analysis by session_id
-            image_analysis = ImageAnalysis.query.filter_by(session_id=session_id).first()
-            if not image_analysis:
-                return jsonify({'error': 'No image analysis found in the session.'}), 400
-            content_context = image_analysis.analysis
+            image_data = ImageSummary.query.filter_by(session_id=session_id).first()
+            if not image_data:
+                return jsonify({'error': error_message}), 400
+            content_context = image_data.summary
 
         else:
-            return jsonify({'error': 'Invalid content type.'}), 400
+            return jsonify({'error': 'Invalid content type provided.'}), 400
 
         # Generate the AI response based on the content context
         conversation_prompt = f"Content: {content_context}\nUser's question: {question}\nAI's answer:"
 
         response = openai.ChatCompletion.create(
             model="gpt-4",
-            messages=[{"role": "system", "content": "You are an AI assistant that answers questions based on the provided content."},
-                      {"role": "user", "content": conversation_prompt}],
+            messages=[
+                {"role": "system", "content": "You are an AI assistant that answers questions based on the provided content."},
+                {"role": "user", "content": conversation_prompt}
+            ],
             temperature=0.7
         )
 
@@ -375,6 +396,7 @@ def ask_question():
     except Exception as e:
         logging.error(f"Error in ask_question: {e}")
         return jsonify({'error': str(e)}), 500
+
 
 # Main route to render the interface
 @app.route('/')
@@ -569,7 +591,8 @@ def get_chat_sessions():
 def delete_chat_session(session_id):
     try:
         # Query the session based on the session_id
-        chat_session = ChatSession.query.get(session_id)
+        chat_session = db.session.get(ChatSession, session_id)
+
         
         if chat_session:
             db.session.delete(chat_session)
