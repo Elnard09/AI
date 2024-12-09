@@ -209,11 +209,6 @@ def get_video_data(video_id):
         return f"Video Title: {video.title}\nDescription: {video.description}\nTranscript: {video.transcript}"
     return None
 
-def save_file_summary_to_db(session_id, summary):
-    file_summary = FileSummary(session_id=session_id, summary=summary)
-    db.session.add(file_summary)
-    db.session.commit()
-
 # Function to interact with OpenAI and get both a response and a session summary
 def get_openai_response(prompt, video_data, generate_summary=False):
     video_title, video_description, video_transcript = video_data
@@ -363,7 +358,7 @@ def ask_question():
         conversation_prompt = f"Content: {content_context}\nUser's question: {question}\nAI's answer:"
 
         response = openai.ChatCompletion.create(
-            model="gpt-4",
+            model="gpt-4o",
             messages=[{"role": "system", "content": "You are an AI assistant that answers questions based on the provided content."},
                       {"role": "user", "content": conversation_prompt}],
             temperature=0.7
@@ -709,7 +704,7 @@ def summarize_code():
         ]
 
         response = openai.ChatCompletion.create(
-            model="gpt-4",
+            model="gpt-4o",
             messages=messages,
             temperature=0.7
         )
