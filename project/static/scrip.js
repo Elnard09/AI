@@ -533,7 +533,7 @@ function initializeFileUpload() {
             const formData = new FormData();
             formData.append("file", file);
 
-            const loadingDiv = createLoadingMessage("Analyzing code... This may take a few seconds.");
+            const loadingDiv = createLoadingMessage("Analyzing file... This may take a few seconds.");
             document.body.appendChild(loadingDiv);
 
             try {
@@ -547,7 +547,7 @@ function initializeFileUpload() {
                 if (response.ok) {
                     // Store content type and AI message in sessionStorage
                     sessionStorage.setItem('currentSessionId', data.session_id); // Store session_id in sessionStorage
-                    sessionStorage.setItem('content_type', data.content_type);  // Set content type (file)
+                    sessionStorage.setItem('content_type', 'file');  // Set content type (file)
                     sessionStorage.setItem("aiMessage", data.aiMessage);  // Store AI message
 
                     // Redirect to /chatAI after processing
@@ -582,7 +582,7 @@ function handleCodeAnalyzer() {
                 return;
             }
 
-            const loadingDiv = createLoadingMessage("Analyzing file... This may take a few seconds.");
+            const loadingDiv = createLoadingMessage("Analyzing code... This may take a few seconds.");
             document.body.appendChild(loadingDiv);
 
             try {
@@ -597,7 +597,7 @@ function handleCodeAnalyzer() {
                 if (response.ok) {
                     // Store content type and AI message in sessionStorage
                     sessionStorage.setItem('currentSessionId', data.session_id); // Store session_id in sessionStorage
-                    sessionStorage.setItem('content_type', data.content_type);  // Set content type (code)
+                    sessionStorage.setItem('content_type', 'code');  // Set content type (code)
                     sessionStorage.setItem("aiMessage", data.aiMessage);  // Store AI message
 
                     // Redirect to /chatAI after processing
@@ -1050,13 +1050,18 @@ function summarizeVideo(youtubeUrl) {
         if (data.error) {
             throw new Error(data.error);
         }
-        sessionStorage.setItem('youtubeLink', youtubeUrl);
-        sessionStorage.setItem('currentSessionId', data.video_id); // Store session_id in sessionStorage
-        sessionStorage.setItem('content_type', 'video'); // Set content type for follow-up questions
+        // Store session_id and content_type in sessionStorage
+        sessionStorage.setItem('currentSessionId', data.session_id); // Store session_id from backend
+        sessionStorage.setItem('content_type', 'video'); // Set content type to 'video'
+
+        // Optionally, store AI response to display
         sessionStorage.setItem("aiMessage", "You can now ask questions based on the summarized video.");
-        window.location.href = '/chatAI';
+
+        // Redirect to /chatAI after processing
+        window.location.href = "/chatAI";
     })
     .catch(error => {
+        console.error(error);
         showError(error.message || 'An error occurred. Please try again.');
         submitBtn.disabled = false;
         submitBtn.textContent = '➔';

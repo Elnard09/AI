@@ -219,12 +219,6 @@ def get_video_data(video_id):
         return video.title, video.description, video.transcript  # Return as a tuple
     return None
 
-
-def save_file_summary_to_db(session_id, summary):
-    file_summary = FileSummary(session_id=session_id, summary=summary)
-    db.session.add(file_summary)
-    db.session.commit()
-
 # Function to interact with OpenAI and get both a response and a session summary
 def get_openai_response(prompt, video_data, generate_summary=False):
     video_title, video_description, video_transcript = video_data
@@ -364,10 +358,18 @@ def ask_question():
             if not chat_session or not chat_session.video_id:
                 return jsonify({'error': 'No associated video found for this session.'}), 400
 
-            video_data = YouTubeVideo.query.filter_by(video_id=session_id).first()
+            video_data = YouTubeVideo.query.filter_by(video_id=chat_session.video_id).first()
             if not video_data:
                 return jsonify({'error': error_message}), 400
-            content_context = video_data.transcript
+            
+            # Extract title, description, and transcript
+            title = video_data.title
+            description = video_data.description
+            transcript = video_data.transcript
+
+            # Combine all three into a single content context
+            content_context = f"Title: {title}\nDescription: {description}\nTranscript: {transcript}"
+
 
         elif content_type == 'image':
             image_data = ImageSummary.query.filter_by(session_id=session_id).first()
@@ -382,7 +384,7 @@ def ask_question():
         conversation_prompt = f"Content: {content_context}\nUser's question: {question}\nAI's answer:"
 
         response = openai.ChatCompletion.create(
-            model="gpt-4",
+            model="gpt-4o",
             messages=[
                 {"role": "system", "content": "You are an AI assistant that answers questions based on the provided content."},
                 {"role": "user", "content": conversation_prompt}
@@ -701,7 +703,8 @@ def upload_file():
             return jsonify({
                 'summary': text_content,
                 'content_type': 'file',
-                'aiMessage': "You can now ask questions based on the full content of the file."
+                'aiMessage': "You can now ask questions based on the full content of the file.",
+                'session_id': session_id  # Return session_id for later use
             })
 
         except Exception as e:
@@ -732,7 +735,7 @@ def summarize_code():
         ]
 
         response = openai.ChatCompletion.create(
-            model="gpt-4",
+            model="gpt-4o",
             messages=messages,
             temperature=0.7
         )
@@ -749,7 +752,8 @@ def summarize_code():
         return jsonify({
             'explanation': explanation,
             'content_type': 'code',
-            'aiMessage': 'You can now ask questions based on the analyzed code.'
+            'aiMessage': 'You can now ask questions based on the analyzed code.',
+            'session_id': session_id  # Return session_id for later use
         })
     except Exception as e:
         logging.error(f"Error summarizing code: {e}")
