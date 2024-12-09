@@ -263,7 +263,11 @@ function displayAIResponse(responseText) {
     const responseElement = document.createElement("div");
     responseElement.className = "ai-message";
     
-    const formattedText = responseText.split("\n").join("<br>");
+    const formattedText = responseText
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')  // Convert bold
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')  // Convert italic
+    .split("\n").join("<br>");  // Add line breaks
+    
     responseElement.innerHTML = formattedText;
     
     chatWindow.appendChild(responseElement);
