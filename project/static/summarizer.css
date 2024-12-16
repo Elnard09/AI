@@ -348,6 +348,7 @@ input[type="text"] {
     font-size: 14px;
     cursor: pointer;
     flex-grow: 1; /* Allows the file input to take available space */
+    width: 100%;
 }
 
 /* Specific styles for Image Analyzer input */
@@ -362,4 +363,5 @@ input[type="text"] {
     font-size: 14px;
     cursor: pointer;
     flex-grow: 1; /* Allows the file input to take available space */
+    width: 100%;
 }
