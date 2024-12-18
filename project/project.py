@@ -798,5 +798,59 @@ def analyze_image():
         logging.error(f"Error analyzing image: {e}")
         return jsonify({'error': 'Failed to analyze the image.'}), 500
     
+@app.route('/generate-code', methods=['POST'])
+@login_required
+def generate_code():
+    try:
+        data = request.get_json()
+        instructions = data.get('instructions')
+        
+        if not instructions:
+            return jsonify({'error': 'Instructions are required.'}), 400
+
+        # Prompt for the model
+        prompt = (
+            "You are a code generator assistant. The user will provide instructions for code they want. "
+            "Generate a clean, well-commented, and working code snippet that satisfies the user instructions.\n\n"
+            f"User instructions: {instructions}\n\n"
+            "Code:"
+        )
+
+        # Interact with OpenAI to generate code
+        messages = [
+            {"role": "system", "content": "You are a helpful coding assistant."},
+            {"role": "user", "content": prompt}
+        ]
+
+        response = openai.ChatCompletion.create(
+            model="gpt-4o", 
+            messages=messages,
+            temperature=0.7
+        )
+
+        generated_code = response['choices'][0]['message']['content']
+
+        # Optionally, save this generated code to a new or existing session
+        # For example, if you want to create a new session for generated code:
+        session_id = create_chat_session(
+            user_id=current_user.id, 
+            title="Code Generation", 
+            description="Code generated from user instructions."
+        )
+        code_summary = CodeSummary(session_id=session_id, summary=generated_code)
+        db.session.add(code_summary)
+        db.session.commit()
+
+        return jsonify({
+            'generated_code': generated_code,
+            'session_id': session_id,
+            'message': 'Code generated successfully!'
+        })
+
+    except Exception as e:
+        logging.error(f"Error generating code: {e}")
+        return jsonify({'error': 'Failed to generate code.'}), 500
+
+    
 if __name__ == '__main__':
     app.run(debug=True, port=8080)
